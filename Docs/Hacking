@@ -1,0 +1,27 @@
+OWASP Top 10
+- Injection
+    - Almost any source of data can be injection vector
+        - {Environment variables, parameters, external/internal web services, users}
+        - Very prevalent, particularly in legacy code
+    - Common vulns found in {SQL, LDAP, XPath, ORM (Object Relational Mapping), or NoSQL queries, OS commands, and XML parsers}
+    - Vulnerable:
+        - User-supplied data is not validated, filtered, or sanitized by the application
+        - Dynamic queries/non-parameterized calls without context-aware escapeing used directly in interpreter
+        - Hostile data is used within ORM search parameters to extract sensitive records
+        - Hostile data is used or concatenated such that query/command contains both structure and hostile data
+        - Types {SQL, NoSQL, OS, ORM, LDAP, EL (Expressional Language), OGNL (Object Graph Navigation Library)}
+        - Source code review is best method of detecting if applications are vulnerable
+        - Followed by automated testing of parameters, headers, URL, cookies, JSON, SOAP, and XML data inputs
+        - Organizations can use SAST and DAST in CI/CD pipeline to identify injection flaws prior to deployment
+    - Prevention:
+        - Keep data seperate from commands and queries
+        - 
+- Broken Authentication
+- Sensitive Data Exposure
+- XML External Entities (XEE)
+- Broken Access Control
+- Security Misconfiguration
+- Cross-Site Scripting (XSS)
+- Insecure Deserialization
+- Using Components with Known Vulnerabilities
+- Insufficient Logging and Monitoring
