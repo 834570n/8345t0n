@@ -1,0 +1,75 @@
+Elearnsecurity Junior Pentester Notes
+
+=== Pentesting Prereqs ===
+NETWORK
+- Packets {header:payload}
+    @ IP protocol header is at least 160 bits (20 bytes)
+        @ First four bits identify IP version
+        @ 32 bits starting at position 96 represent source address
+        @ Following four bytes represent destination address
+    * Application layer * Transport layer * Network layer * Physical layer
+    * Application * Presentaion * Session * Transport * Network * Data Link * Physical
+    - Packets contain lower protocol packets in their header * Encapsulation
+- Internet Protocol
+    - Runs on internet layer
+    - Delivers datagrams (IP packets)
+    - Uses IP addresses
+    @ IP address: 192.168.33.12 @ Subnet mask: 255.255.224.0
+    @ SM: 11111111.11111111.11100000.00000000
+    @ IP: 11000000.10101000.00100001.00001100
+    @ NE: 11000000.10101000.00100000.00000000 -> 192.168.32.0 (network prefix)
+        - 192.168.32.0/255.255.224.0 = 192.168.32.0/19 (CIDR notation)
+    * IP & Subnet Mask = Network
+    @ If there are 13 bits to represent hosts, network can contain 2^13 different addresses
+    - Addresses with host part made up of all 0's or all 1's are special
+    @ 10.54.12.0/24
+        - Contains 2^8 addresses
+        - 10.54.12.0 is network address
+        - 10.54.12.255 is broadcast address
+    @ 192.168.114.32/27
+        - Contains 2^5 addresses
+        - 192.168.114.32 is network address
+        - 192.168.114.63 is broadcast address
+    @ 172.16.2.0/23
+        - 172.16.3.12 and 172.16.2.66 are in the same network
+        - 172.16.3.240 and 172.16.4.2 are not in the same network
+    @ 192.168.1.0/16
+        - Does not make sense
+        - 192.168.1.0 & 255.255.0.0 -> 192.168.0.0 as network address
+        - Could be valid IP address in 192.168.1.0/16 network
+    - IPv6
+        - First 48 bits are for Internet global addressing
+        - 16 bits from 49th to 64th are for subnets
+        - Last 64 bits are for device ID's
+- Routing
+    - Routing table contains IP-to-interface binding
+    - During path discovery, routing protocols assign a metric to each link
+    $ ip route      //Linux
+    $ route print   //Windows
+    $ netstat -r    //OSX
+- Link Layer
+    - Lowest layer of the TCP/IP stack
+    - Routers aware of best overall path to destination, link layer deals with the next hop
+    * Hubs and switches are network devices that forward frames (layer 2 packets)
+        - Work with link layer network addresses: MAC addresses
+    - IP addresses are layer 3 addresses (network layer) that identify host
+    - MAC addresses are layer 2 addresses (link layer) that indetify network card
+        - Also known as physical address
+        - 48 bit and expressed in hex
+    $ ip addr   //Linux
+    $ ifconfig  //OSX
+    $ ipconfig  /all //Windows
+    * The lower layer serves the layer above
+    @ A wants to send packet to B, through router
+        - Dest IP: B (in IP header of datagram)
+        - Dest MAC: Router (in link layer header of frame)
+        - Src IP: A
+        - Src MAC: A
+        - Router takes packet and forwards it to B's network
+        - Dest MAC: B
+        - Src MAC: Router
+    - Destination MAC is MAC of next hop
+    - Destination IP is global and remains the same
+    - FF:FF:FF:FF:FF:FF is broadcast MAC
+    - A frame with this address is delivered to all hosts within the same broadcast domain
+WEB APP
