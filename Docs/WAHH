@@ -1,0 +1,49 @@
+Exploitable Locations
+- Core functionality
+- Peripheral behavior 
+    - Off-site links
+    - Error messages
+    - Admin and logging features
+    - Redirects
+- Core security mechanisms
+    - Session handling
+    - Authentication
+    - Access controls
+    - Supporting logic
+        - User registration
+        - Password changes
+        - Account recovery
+- Locations with user-supplied input
+    - URL
+    - Query string parameters
+    - POST data
+    - Cookies
+- Client-side technology
+    - Forms
+    - Scripts
+    - Thick-client components
+        - Java applets
+        - ActiveX controls
+        - Flash
+    - Cookies
+- Server-side technology
+    - Static and dynamic pages
+    - Request parameters
+    - SSL usage
+    - Web server software
+    - Database integration
+    - E-mail systems
+    - Other backend components
+- Internal structure details on functionality of server-side application
+    - Mechanisms to deliver functionality and behavior that are visible to client
+
+* PAGE 98
+ENTRY POINTS FOR USER INPUT
+- URL up to query string marker
+- URL query string
+- Parameters submitted in body of POST request
+    - Referer
+    - User-agent
+    - X-Forwarded-For
+- Cookies
+- HTTP headers
