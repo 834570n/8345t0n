@@ -400,6 +400,18 @@ VULNERABILITY ASSESSMENT
     - Vuln scanner sends probes to verify if vuln exists
         - Prone to false positives
 WEB ATTACKS
+- Fingerprinting
+    - $ httprint -P0 -h <IP> -s /usr/share/httprint/signatures.txt
+- HTTP Verbs
+    - GET
+        - To pass course=PTS to page.php -> GET /page.php?course=PTS HTTP/1.1
+    - POST
+        - Submits HTML form data in message body
+    - PUT
+        - Uploads file to server
+        - Use wc -m on file
+- Netcat
+    - 
 SYSTEM ATTACKS
 - Malware
     - Virus

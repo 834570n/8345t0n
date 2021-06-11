@@ -15,8 +15,21 @@ OWASP Top 10
         - Organizations can use SAST and DAST in CI/CD pipeline to identify injection flaws prior to deployment
     - Prevention:
         - Keep data seperate from commands and queries
-        - 
+        - Use safe API that avoids use of interpreter/provides parameterized interface/migrate to ORMs
+        - Use whitelist server-side input validation
+        - Escape special characters
+        * SQL structure cannot be escaped -> user-supplied structure names are dangerous
+        - Use LIMIT and other SQL controls within queries to prevent mass disclosure
+    - Examples:
+        - String query = "SELECT * FROM accounts WHERE custID='" + request.getParameter("id") + "'");
+        - Query HQLQuery = session.createQuery("FROM accounts WHERE custID='" + request.getParameter("id") + "'");
+        * http://example.com/app/accountView?id='+OR+1=1'--
+            - Returns all records from the accounts table
 - Broken Authentication
+    - 
+    - Vulnerable:
+    - Prevention:
+    - Examples:
 - Sensitive Data Exposure
 - XML External Entities (XEE)
 - Broken Access Control

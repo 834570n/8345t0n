@@ -1,0 +1,7 @@
+HTB ACADEMY
+
+$ ftp -p x.x.x.x
+$ smbclient -N -L \\\\x.x.x.x
+$ smbclient -U <user> \\\\x.x.x.x\\<share>
+$ snmpwalk -v 2c -c public x.x.x.x 1.3.6.1.2.1.1.5.0
+$ onesixtyone -c <dict> x.x.x.x

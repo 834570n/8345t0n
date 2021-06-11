@@ -47,3 +47,30 @@ ENTRY POINTS FOR USER INPUT
     - X-Forwarded-For
 - Cookies
 - HTTP headers
+
+DOM XSS example payload
+<iframe src="javascript:alert(`xss`)">
+
+Dont Repeat Yourself - Every piece of knowledge must have a single, unambiguous, authoritative representation in the system
+    - Provide different input in the "repeat password" field
+
+Mapping the Attack Surface
+- Client-side validation        Checks may not be replicated on the server
+- Database interaction          SQL injection
+- File upload/download          Path traversal, stored XSS
+- Display of user-supplied data XSS
+- Dynamic redirects             Redirection and header injection
+- Social networking features    Username enumeration, stored XSS
+- Login                         Username enumeration, weak passwords, brute force
+- Multistage login              Logic flaws
+- Session state                 Predictable tokens, insecure handling of tokens
+- Access controls               Horizontal and vertical privesc
+- User impersonation functions  Privesc
+- Cleartext communications      Session hijacking, capture of creds and other sensitive data
+- Off-site links                Leakage of query string parameters in Referer header
+- Interfaces to ext systems     Shortcuts in handling of sessions/access controls
+- Error messages                Information leakage
+- E-mail interaction            E-mail/command injection
+- Native code components        Buffer overflow
+- Indentifiable web server      Common configuration weaknesses, known software bugs
+
