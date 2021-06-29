@@ -74,3 +74,70 @@ Mapping the Attack Surface
 - Native code components        Buffer overflow
 - Indentifiable web server      Common configuration weaknesses, known software bugs
 
+=== HACK STEPS ===
+CHAPTER 1 - 1
+CHAPTER 2 - 17
+CHAPTER 3 - 39
+CHAPTER 4 - 73
+CHAPTER 5 - 117
+CHAPTER 6 - 159
+- Bad passwords
+    1 Review website for password rules
+    2 Attempt to register accounts with different weak passwords to discover password rules     (Self-registration)
+    3 Attempt to change password to various weak values                                         (Single account control)
+- Brute-forcible login
+    1 Submit bad login attempts for an account you control, monitor error messages  (Control account)
+    2 After about 10 failed logins attempt correct login, if it succeeds then there is probably no account lockout policy
+    3 If account gets locked out -> repeat using different account, obtaining new cookie for each login attempt
+    4 If account gets locked out -> check for difference in response when submitting correct password
+    5 Attempt to enumerate a valid username and make bad logins using this          (No controlled account)
+    6 Identify difference in response to successful and failed logins
+    7 Obtain list of usernames and passwords, tailored to password quality rules
+    8 Use burp to brute force
+    9 If targeting several usernames -> perform breadth-first attack (try common password with each username)
+- Verbose failure messages
+    1 If you know a valid username -> submit a login with username/incorrect password and one with random username
+    2 Record status code, redirects, information displayed on-screen, and HTML page sources
+    3 Attempt to discover differences to the two login attempts
+    4 Repeat exercise everywhere a username can be submitted (self-registration, password change, forgotten password)
+    5 If a difference is detected -> obtain list of common usernames -> filter valid usernames
+    6 If app performs account lockout -> use battering ram to submit common password along with username during username enumeration
+- Vulnerable transmission of credentials
+    1 Successfully login while monitoring traffic between client and server
+    2 Identify where creds are transmitted (set interception rules in burp)
+    3 Identify where creds are submitted in URL query string, as a cookie, or transmitted from server back to client
+    4 If any sensitive information is transmitted -> vulnerable to interception
+    5 If creds are not insecurely transmitted -> look for sensitive data that is encoded or obfuscated and reverse-engineer
+    6 If creds are submitted using HTTPS but login is loaded using HTTP -> app is vulnerable to mitm attack
+- Password change functionality
+    1 Identify password change functionality
+    2 Make various requests using invalid usernames, invalid existing passwords, and mismatched new/confirm password values
+    3 Identify behavior that can be used for username enumeration or brute-force attacks
+- Forgotten password functionality
+    1 Identify forgotten password functionality
+    2 Do walkthrough of forgotten password function with controlled account
+    3 If mechanism uses challenge -> can users select their own challenge -> harvest list of challenges
+    4 If mechanism uses hint -> harvest list of hints
+    5 Identify behavior that can be exploited as basis for username enum or brute force
+    6 If app generates emails containing recovery URL -> obtain URLs -> attempt to predict URLs issued to other users -> repeat with tokens
+- Remember me functionality
+    1 Activate remember me functionality -> determine whether app fully remembers user or just username
+    2 Inspect persistent cookies, data in persisted local storage (IE userData, silverlight isolated storage, flash shared objects)
+    3 Inspect obfuscated stored data and compare to results of remembering similar usernames/passwords
+    4 Attempt to modify contents of persistent cookie
+- User impersonation functionality
+CHAPTER 7 - 205
+CHAPTER 8 - 257
+CHAPTER 9 - 287
+CHAPTER 10 - 357
+CHAPTER 11 - 405
+CHAPTER 12 - 431
+CHAPTER 13 - 501
+CHAPTER 14 - 571
+CHAPTER 15 - 615
+CHAPTER 16 - 633
+CHAPTER 17 - 647
+CHAPTER 18 - 669
+CHAPTER 19 - 701
+CHAPTER 20 - 747
+CHAPTER 21 - 791
