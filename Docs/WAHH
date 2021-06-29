@@ -80,7 +80,7 @@ CHAPTER 2 - 17
 CHAPTER 3 - 39
 CHAPTER 4 - 73
 CHAPTER 5 - 117
-CHAPTER 6 - 159
+CHAPTER 6 - 159 ATTACKING AUTHENTICATION
 - Bad passwords
     1 Review website for password rules
     2 Attempt to register accounts with different weak passwords to discover password rules     (Self-registration)
@@ -126,6 +126,17 @@ CHAPTER 6 - 159
     3 Inspect obfuscated stored data and compare to results of remembering similar usernames/passwords
     4 Attempt to modify contents of persistent cookie
 - User impersonation functionality
+    1 Identify impersonation functionality
+    2 Attempt to use impersonation functionality to impersonate other users
+    3 Attempt to manipulate impersonation function to impersonate other users
+    4 Attempt to impersonate admin users
+    5 Brute force -> if user has more than one password or password works for several users -> impersonation functionality
+- Incomplete validation of credentials
+    1 Attempt to login with variations of account password in order to determine validation
+    2 Use results to improve password-guessing attacks
+- Nonunique usernames
+    1 If self-registration is possible -> attempt to register same username with different passwords
+    2 If app blocks multiple registrations -> 
 CHAPTER 7 - 205
 CHAPTER 8 - 257
 CHAPTER 9 - 287
