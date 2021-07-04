@@ -1,0 +1,96 @@
+#!/usr/bin/python3
+
+import os
+import time
+import json
+from moma import MoneyMan
+
+# budget: [["Rent", 950, 950], ["Transportation, 50, 400], ...]
+
+def main():
+    # Load save file
+    budget, name = loadSave()
+    moma = MoneyMan(budget)
+    # Main logic loop
+    flag = True
+    while(flag):
+        # Set budget if new account
+        if (moma.checkNew()):
+            initialize(moma, budget)
+        # UI
+        flag = UI(moma, budget)
+            #> set budget
+            #> log <category> <amount>
+            #> exit
+    # Save
+    print("Saving...")
+    save(moma.returnBudget(), name)
+    print("Goodbye!")
+    time.sleep(1)
+    os.system("clear")
+
+
+def loadSave():
+    budget = [["Rent", 0, 0], ["Food", 0, 0], ["Utilities", 0, 0], ["Transportation", 0, 0], ["Necessities", 0, 0], ["Entertainment", 0, 0]]
+    saves = os.listdir("./saves")
+    newAccount = True
+    os.system("clear")
+    name = input("Enter your name: ")
+    for saveFile in saves:
+        if (name.upper() == saveFile.upper()):
+            print(f'Loading {saveFile}')
+            with open(f'./saves/{saveFile}', 'r') as filehandle:
+                budget = json.load(filehandle)
+            newAccount = False
+    if (newAccount):
+        os.system(f'touch ./saves/{name}')
+    return budget, name
+
+def initialize(moma, budget):
+    os.system("clear")
+    # Get total budget
+    total = input("Enter Budget Total: $")
+    # Iterate through and set budgets 
+    for i in budget:
+        val = input(f'Enter {i[0]} budget: $')
+        moma.setBudget(i[0], val)
+    # Check if total = sum of budgets
+    if (not moma.checkTotal(total)):
+        print("Totals do not match up, try again!")
+        time.sleep(1)
+        initialize(moma, budget)
+
+def display(moma, budget):
+    os.system("clear")
+    moma.displayBudget()
+    for i in budget:
+        moma.displayCategory(i[0])
+
+def UI(moma, budget):
+    display(moma, budget)
+    flag = True
+    text = input(">>> ").split()
+    #> set budget
+    #> set <category> <val>
+    if (text[0].upper() == "SET"):
+        if (text[1].upper() == "BUDGET"):
+            initialize()
+    #> log <category> <val>
+    elif (text[0].upper() == "LOG"):
+        if (moma.checkCategory(text[1])):
+            moma.reduceCategory(text[1], float(text[2]))
+    #> exit
+    elif (text[0].upper() == "EXIT"):
+        flag = False
+    else:
+        print("Incorrect response")
+        time.sleep(1)
+    return flag
+
+def save(budget, name):
+    if (len(name) > 0):
+        with open(f'./saves/{name}', 'w') as filehandle:
+            json.dump(budget, filehandle)
+
+if (__name__ == "__main__"):
+    main()
