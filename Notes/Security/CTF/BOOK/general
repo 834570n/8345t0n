@@ -1,0 +1,18 @@
+=== GENERAL ===
+ifconfig/ip a                           Show IP address
+netstat -rn                             Show networks accessible via VPN
+python3 -m http.server 8000             Start local server
+wget http://<ip>:8000/<file>            Grab file from server (1)
+curl http://<ip>:8000/<file> -o out.txt Grab file from server (2)
+scp <file> <user>@<ip>:/<path>/out.txt  Grab file from server with SSH
+
+ENCRYPTION
+base64 <file> -w 0                              Base64 encode file
+echo text | base64 -d > <file>                  Base64 decode file
+md5sum <file>                                   Check to make sure file converted correctly
+echo text | base64                              Base64 encode text
+echo encoded_b64 | base64 -d                    Base64 decode text
+echo text | xxd -p                              Hex encode text
+echo encoded_hex | xxd -p -r                    Hex decode text
+echo text | tr 'A-Za-z' 'N-ZA-Mn-za-m'          ROT13 encode text
+echo encoded_rot13 | tr 'A-Za-z' 'N-ZA-Mn-za-m' ROT13 dedode text

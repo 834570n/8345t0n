@@ -1,0 +1,20 @@
+=== WEB ===
+gobuster dir -u <host> -w <wordlist> -t 20      Directory scan
+gobuster dns -d <host> -w <wordlist>            Sub-domain scan
+whatweb <ip>                                    List details about webserver/certs
+
+CURL
+curl http://<host> -v                                                                               GET request, verbose
+curl -IL <host>                                                                                     Grab website banner
+curl <ip>/robots.txt                                                                                Print robots.txt
+curl http://<user>:<password>@<host> -vvv                                                           Basic auth login (1)
+curl -u <user>:<password> http://<host> -vvv                                                        Basic auth login (2)
+curl -u <user>:<password> -L http://<host>                                                          Basic auth login, follow redirection
+curl -u <user>:<password> 'http://<host>/search.php?var=us'                                         GET request with parameter
+curl -d 'username=<user>&password=<password>' -L http://<host>/login.php -v                         POST request (1), verbose
+curl -d 'username=<user>&password=<password>' -L --cookie-jar cookies.txt http://<host>/login.php   Cookie usage
+curl -H 'Content-Type: application/json' -d '{ "username" : "admin", "password" : "password" }'     Set header
+curl -X OPTIONS http://<host> -vv                                                                   OPTIONS request
+curl -X PUT -d @test.txt http://<host>/test.txt -vv                                                 PUT request, file upload
+curl -X DELETE http://<host>/test.txt -vv                                                           DELETE request, file deletion
+curl -s http://<host> -X POST -d 'param1=example'                                                   POST request (2)

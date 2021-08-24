@@ -1,0 +1,141 @@
+WEB HACKING WORKFLOW
+
+=== Mapping the Attack Surface ===
+- Client-side validation        Checks may not be replicated on the server
+- Database interaction          SQL injection
+- File upload/download          Path traversal, stored XSS
+- Display of user-supplied data XSS
+- Dynamic redirects             Redirection and header injection
+- Social networking features    Username enumeration, stored XSS
+- Login                         Username enumeration, weak passwords, brute force
+- Multistage login              Logic flaws
+- Session state                 Predictable tokens, insecure handling of tokens
+- Access controls               Horizontal and vertical privesc
+- User impersonation functions  Privesc
+- Cleartext communications      Session hijacking, capture of creds and other sensitive data
+- Off-site links                Leakage of query string parameters in Referer header
+- Interfaces to ext systems     Shortcuts in handling of sessions/access controls
+- Error messages                Information leakage
+- E-mail interaction            E-mail/command injection
+- Native code components        Buffer overflow
+- Indentifiable web server      Common configuration weaknesses, known software bugs
+
+=== Common Findings ===
+Access Controls
+- Cookies set to parent domain
+- Insecure Access-Control-Allow-Origin-Header
+- Session handling
+    - App does not use redirect upon session expiration
+    - No session timeout/timeout too long
+    - Session does not expire upon tab closure
+    - Session fixation
+    - Session ID cookie not set with HTTP Only flag
+    - Session ID cookies not marked as Secure
+    - Session remains active after logout
+    - Session tracking cookie value predictable
+- Privesc
+
+Authentication
+- Account harvesting through system login messages
+- Account harvesting through account lockout
+- Account harvesting through user registration/management
+- Admin login accessible through internet
+- App uses email address as username
+- Browser autocomplete allowed after authentication
+- Browser autocomplete enabled before authentication
+- Citigroup password policy violation
+- Incomplete sign-off
+- Logout function not available on every page
+- No account lockout after 6 failed attempts
+- User can bypass password policies
+- User can bypass password policies post auth
+
+Application Logic
+- Ability to bypass business logic
+- Messages can be configured by user post auth
+- Messages can be configured by user pre auth
+- Validation logic not implemented
+
+Information Disclosure
+- Banner advertises service/version
+- Confidential information passed in cleartext in GET URL
+- Default files/information gathering
+- Information disclosure .NET errors
+- Microsoft ASP.NET debug enabled
+- Private IP address leaked in HTTP headers
+- Sensitive information cached to disk
+- Sensitive information obtained
+- Sensitive information stored in persistent cookie in clear text
+- Sensitive information stored in persistent cookie in clear text post auth
+- Sensitive information stored on disk HTML 5
+- Suspicious files found in recursive directory
+- Suspicious files found in recursive directory post auth
+- Temporary files download .bak
+- Temporary files download .bak post auth
+- Test/debug/old/backup files present
+
+Web Server
+- Cache POST request returns 200 OK server response
+- Cache POST request returns 200 OK server response post authentication
+- Forceful browsing
+- General patch management
+- HTTP Headers
+    - Insecure HTTP methods enabled for directory
+    - Secure headers not used
+- IPv6 is enabled
+- Upload function can be used to upload malicious files/scripts
+- Weak encryption
+    - Extended validation TLS/SSL certificates
+    - Vulnerable TLS protocol in use
+    * ssllabs
+    * sslyze
+    * nmap nse script
+
+Other
+- Incomplete configuration files provided
+- Incomplete directory listing provided
+- Third party code references
+
+=== Tools ===
+- nmap
+- nikto
+- nessus
+- dirb
+- ssllabs
+- burp
+    - Active scan++
+    - Anonymous cloud configuration
+    - Subdomain scanner
+    - AWS security checks
+    - Backlash powered scanner
+    - CO2 cookie decrypter
+    - Error message checks
+    - Hackvertor
+    - HTML5 auditor
+    - HTTP request smuggler
+    - InQL
+    - J2EEScan
+    - Java deserialization scanner
+    - JSON web token attacker
+    - NoSQLi scanner
+    - NTLM challenge decoder
+    - Retire.js
+    - WAFDetect
+    - SAML raider
+    - Collaborator everywhere (breaks shit)
+
+
+307313 (64615):H5 Closed in UAT pending PCV
+307313 (64615):H6 Dev attestation for case 2 as it is out of scope
+
+64621:H3 nmap nse ssl-cert
+- Finding still open handle internally
+64621:M2 check URL for logout functionality
+64621:M3 check if library is gone
+- Login and go to pages if unauth cant reach
+- Cant close until vuln library is gone
+- Check current version of library
+- Run sslabs check
+64621:M4 
+64621:M5 
+64621:M6 

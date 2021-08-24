@@ -1,0 +1,7 @@
+=== PRIVESC ===
+./linpeas.sh -a > linpeas.txt                   Run linpeas and output to file
+sudo -l                                         List sudo privs
+sudo -u <user> /bin/echo Hello World!           Run command with sudo
+ssh-keygen -f key                               Create SSH key
+echo <ssh key> >> /root/.ssh/authorized_keys    Add generated public key to user
+ssh root@<ip> -i key                            SSH into server with generated private key

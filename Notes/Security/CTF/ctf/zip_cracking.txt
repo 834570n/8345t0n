@@ -1,0 +1,13 @@
+Sometimes zip files are protected with a password.
+You can attempt to crack the password with tools
+like john and fcrackzip
+
+fcrackzip -D -v -u -p /path/to/dictionary.txt zipfile.zip
+
+-D  Dictionary attack
+-v  Verbose
+-u  Tries to unzip first file with current password guess (removes false positives)
+-p  Password dictionary file
+
+zip2john zipfile.zip > hash.txt
+john --format=zip hash.txt

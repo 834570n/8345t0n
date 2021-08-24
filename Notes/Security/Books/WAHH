@@ -1,0 +1,162 @@
+Exploitable Locations
+- Core functionality
+- Peripheral behavior 
+    - Off-site links
+    - Error messages
+    - Admin and logging features
+    - Redirects
+- Core security mechanisms
+    - Session handling
+    - Authentication
+    - Access controls
+    - Supporting logic
+        - User registration
+        - Password changes
+        - Account recovery
+- Locations with user-supplied input
+    - URL
+    - Query string parameters
+    - POST data
+    - Cookies
+- Client-side technology
+    - Forms
+    - Scripts
+    - Thick-client components
+        - Java applets
+        - ActiveX controls
+        - Flash
+    - Cookies
+- Server-side technology
+    - Static and dynamic pages
+    - Request parameters
+    - SSL usage
+    - Web server software
+    - Database integration
+    - E-mail systems
+    - Other backend components
+- Internal structure details on functionality of server-side application
+    - Mechanisms to deliver functionality and behavior that are visible to client
+
+* PAGE 98
+ENTRY POINTS FOR USER INPUT
+- URL up to query string marker
+- URL query string
+- Parameters submitted in body of POST request
+    - Referer
+    - User-agent
+    - X-Forwarded-For
+- Cookies
+- HTTP headers
+
+DOM XSS example payload
+<iframe src="javascript:alert(`xss`)">
+
+Dont Repeat Yourself - Every piece of knowledge must have a single, unambiguous, authoritative representation in the system
+    - Provide different input in the "repeat password" field
+
+Mapping the Attack Surface
+- Client-side validation        Checks may not be replicated on the server
+- Database interaction          SQL injection
+- File upload/download          Path traversal, stored XSS
+- Display of user-supplied data XSS
+- Dynamic redirects             Redirection and header injection
+- Social networking features    Username enumeration, stored XSS
+- Login                         Username enumeration, weak passwords, brute force
+- Multistage login              Logic flaws
+- Session state                 Predictable tokens, insecure handling of tokens
+- Access controls               Horizontal and vertical privesc
+- User impersonation functions  Privesc
+- Cleartext communications      Session hijacking, capture of creds and other sensitive data
+- Off-site links                Leakage of query string parameters in Referer header
+- Interfaces to ext systems     Shortcuts in handling of sessions/access controls
+- Error messages                Information leakage
+- E-mail interaction            E-mail/command injection
+- Native code components        Buffer overflow
+- Indentifiable web server      Common configuration weaknesses, known software bugs
+
+=== HACK STEPS ===
+CHAPTER 1 - 1
+CHAPTER 2 - 17
+CHAPTER 3 - 39
+CHAPTER 4 - 73
+CHAPTER 5 - 117
+CHAPTER 6 - 159 ATTACKING AUTHENTICATION
+- Bad passwords
+    1 Review website for password rules
+    2 Attempt to register accounts with different weak passwords to discover password rules     (Self-registration)
+    3 Attempt to change password to various weak values                                         (Single account control)
+- Brute-forcible login
+    1 Submit bad login attempts for an account you control, monitor error messages  (Control account)
+    2 After about 10 failed logins attempt correct login, if it succeeds then there is probably no account lockout policy
+    3 If account gets locked out -> repeat using different account, obtaining new cookie for each login attempt
+    4 If account gets locked out -> check for difference in response when submitting correct password
+    5 Attempt to enumerate a valid username and make bad logins using this          (No controlled account)
+    6 Identify difference in response to successful and failed logins
+    7 Obtain list of usernames and passwords, tailored to password quality rules
+    8 Use burp to brute force
+    9 If targeting several usernames -> perform breadth-first attack (try common password with each username)
+- Verbose failure messages
+    1 If you know a valid username -> submit a login with username/incorrect password and one with random username
+    2 Record status code, redirects, information displayed on-screen, and HTML page sources
+    3 Attempt to discover differences to the two login attempts
+    4 Repeat exercise everywhere a username can be submitted (self-registration, password change, forgotten password)
+    5 If a difference is detected -> obtain list of common usernames -> filter valid usernames
+    6 If app performs account lockout -> use battering ram to submit common password along with username during username enumeration
+- Vulnerable transmission of credentials
+    1 Successfully login while monitoring traffic between client and server
+    2 Identify where creds are transmitted (set interception rules in burp)
+    3 Identify where creds are submitted in URL query string, as a cookie, or transmitted from server back to client
+    4 If any sensitive information is transmitted -> vulnerable to interception
+    5 If creds are not insecurely transmitted -> look for sensitive data that is encoded or obfuscated and reverse-engineer
+    6 If creds are submitted using HTTPS but login is loaded using HTTP -> app is vulnerable to mitm attack
+- Password change functionality
+    1 Identify password change functionality
+    2 Make various requests using invalid usernames, invalid existing passwords, and mismatched new/confirm password values
+    3 Identify behavior that can be used for username enumeration or brute-force attacks
+- Forgotten password functionality
+    1 Identify forgotten password functionality
+    2 Do walkthrough of forgotten password function with controlled account
+    3 If mechanism uses challenge -> can users select their own challenge -> harvest list of challenges
+    4 If mechanism uses hint -> harvest list of hints
+    5 Identify behavior that can be exploited as basis for username enum or brute force
+    6 If app generates emails containing recovery URL -> obtain URLs -> attempt to predict URLs issued to other users -> repeat with tokens
+- Remember me functionality
+    1 Activate remember me functionality -> determine whether app fully remembers user or just username
+    2 Inspect persistent cookies, data in persisted local storage (IE userData, silverlight isolated storage, flash shared objects)
+    3 Inspect obfuscated stored data and compare to results of remembering similar usernames/passwords
+    4 Attempt to modify contents of persistent cookie
+- User impersonation functionality
+    1 Identify impersonation functionality
+    2 Attempt to use impersonation functionality to impersonate other users
+    3 Attempt to manipulate impersonation function to impersonate other users
+    4 Attempt to impersonate admin users
+    5 Brute force -> if user has more than one password or password works for several users -> impersonation functionality
+- Incomplete validation of credentials
+    1 Attempt to login with variations of account password in order to determine validation
+    2 Use results to improve password-guessing attacks
+- Nonunique usernames
+    1 If self-registration is possible -> attempt to register same username with different passwords
+    2 If app blocks multiple registrations -> make registration attempts with common usernames
+    3 If registration of duplicate username succeeds -> attempt to register with duplicate password
+        a If error message -> brute force
+        b If no error -> login and see what happens
+- Predictable usernames
+    1 If app generates usernames -> obtain several in quick succession, find pattern/sequence
+    2 Extrapolate backwards to obtain list of usernames
+- Predictable initial passwords
+    1 
+CHAPTER 7 - 205
+CHAPTER 8 - 257
+CHAPTER 9 - 287
+CHAPTER 10 - 357
+CHAPTER 11 - 405
+CHAPTER 12 - 431
+CHAPTER 13 - 501
+CHAPTER 14 - 571
+CHAPTER 15 - 615
+CHAPTER 16 - 633
+CHAPTER 17 - 647
+CHAPTER 18 - 669
+CHAPTER 19 - 701
+CHAPTER 20 - 747
+CHAPTER 21 - 791

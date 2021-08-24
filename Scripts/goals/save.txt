@@ -1,0 +1,1 @@
+{["Start Kays Security", 0, "07/01/2021"], ["OSCP", 0, "07/01/2014"], ["CISSP", 0, "07/01/2017"], ["AWS CCP", 1, "07/01/2021"], ["Pro Hacker on HTB", 1, "07/01/2021"], ["eJPT", 2, "07/01/2021"], ["Chap 6 WAHH", 3, "06/28/2021"], ["Haircut", 3, "06/28/2021"], ["Goalkeeping python script", 3, "06/28/2021"]}

